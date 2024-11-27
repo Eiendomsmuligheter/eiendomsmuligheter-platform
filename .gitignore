@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+.env
+.env.local
+.next/
+build/
+dist/
+.DS_Store
+# IDE files
+.idea/
+.vscode/

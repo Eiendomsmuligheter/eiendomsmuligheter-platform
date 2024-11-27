@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EiendomsMuligheter.no - AI-drevet eiendomsanalyse</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e1e2f 0%, #2a2a3c 100%);
+        }
+        .hero-section {
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+                        url('./public/images/modern-building.jpg');
+            background-size: cover;
+            background-position: center;
+            min-height: 100vh;
+        }
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+        .gradient-text {
+            background: linear-gradient(120deg, #00ff88, #00a1ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .search-input {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 bg-black/20 backdrop-blur-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between h-20">
+                <div class="flex-shrink-0 flex items-center">
+                    <h1 class="text-2xl font-bold gradient-text">EiendomsMuligheter</h1>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#hvordan" class="text-white hover:text-[#00ff88] transition-colors">Hvordan det fungerer</a>
+                    <a href="#priser" class="text-white hover:text-[#00ff88] transition-colors">Priser</a>
+                    <a href="#start" class="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-lg transition-all backdrop-blur-md border border-white/10">
+                        Start Analyse
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero-section flex items-center justify-center">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <h1 class="text-5xl md:text-6xl font-bold mb-6 gradient-text animate-fade-in">
+                Eiendomsmuligheter
+            </h1>
+            <p class="text-xl md:text-2xl text-white mb-12 max-w-3xl mx-auto animate-fade-in" style="animation-delay: 0.2s">
+                Avdekk skjulte muligheter i din eiendom med vår AI-drevne analyseplattform
+            </p>
+            
+            <div class="max-w-2xl mx-auto mb-16 animate-fade-in" style="animation-delay: 0.4s">
+                <div class="flex gap-4 bg-white/10 p-2 rounded-lg backdrop-blur-md">
+                    <input 
+                        type="text" 
+                        placeholder="Skriv inn adressen til eiendommen" 
+                        class="search-input flex-1 px-6 py-4 rounded-lg text-white border-none focus:ring-2 focus:ring-blue-500"
+                    >
+                    <button class="px-8 py-4 bg-gradient-to-r from-[#00ff88] to-[#00a1ff] text-white rounded-lg hover:opacity-90 transition-opacity font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        Analyser
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 animate-fade-in" style="animation-delay: 0.6s">
+                <div class="feature-card p-8 rounded-xl text-white">
+                    <div class="text-5xl mb-4">🤖</div>
+                    <h3 class="text-xl font-semibold mb-3 text-[#00ff88]">AI-Drevet Analyse</h3>
+                    <p class="text-gray-300">Avansert maskinlæring analyserer alle aspekter av din eiendom</p>
+                </div>
+
+                <div class="feature-card p-8 rounded-xl text-white">
+                    <div class="text-5xl mb-4">🏗️</div>
+                    <h3 class="text-xl font-semibold mb-3 text-[#00ff88]">3D Visualisering</h3>
+                    <p class="text-gray-300">Se potensielle endringer i interaktive 3D-modeller</p>
+                </div>
+
+                <div class="feature-card p-8 rounded-xl text-white">
+                    <div class="text-5xl mb-4">📊</div>
+                    <h3 class="text-xl font-semibold mb-3 text-[#00ff88]">Økonomisk Analyse</h3>
+                    <p class="text-gray-300">Detaljerte ROI-beregninger og markedsanalyser</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+        // Add smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

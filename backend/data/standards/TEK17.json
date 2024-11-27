@@ -1,0 +1,106 @@
+{
+    "version": "TEK17",
+    "lastUpdated": "2024-01-01",
+    "chapters": {
+        "accessibility": {
+            "title": "Universell utforming og tilgjengelighet",
+            "sections": {
+                "entrances": {
+                    "requirements": [
+                        {
+                            "code": "§12-4",
+                            "description": "Inngangsparti skal være trinnfritt",
+                            "measurements": {
+                                "minimumWidth": 1.5,
+                                "maximumThreshold": 0.025,
+                                "minimumManeuvringSpace": 1.5
+                            }
+                        }
+                    ]
+                },
+                "internal": {
+                    "requirements": [
+                        {
+                            "code": "§12-7",
+                            "description": "Krav til romstørrelser og utforming",
+                            "measurements": {
+                                "minimumCircle": 1.5,
+                                "minimumPassageWidth": 0.9,
+                                "minimumCeilingHeight": 2.4
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "fire": {
+            "title": "Brannsikkerhet",
+            "sections": {
+                "fireResistance": {
+                    "requirements": [
+                        {
+                            "code": "§11-4",
+                            "description": "Bæreevne og stabilitet ved brann",
+                            "specifications": {
+                                "loadBearingStructures": "R30",
+                                "separatingStructures": "REI30-A2-s1,d0"
+                            }
+                        }
+                    ]
+                },
+                "escape": {
+                    "requirements": [
+                        {
+                            "code": "§11-13",
+                            "description": "Utgang fra branncelle",
+                            "specifications": {
+                                "maximumDistance": 30,
+                                "minimumWidth": 0.9,
+                                "minimumDoorHeight": 2.0
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "wetRooms": {
+            "title": "Våtrom",
+            "sections": {
+                "waterproofing": {
+                    "requirements": [
+                        {
+                            "code": "§13-15",
+                            "description": "Våtrom og rom med vanninstallasjoner",
+                            "specifications": {
+                                "floorMembrane": true,
+                                "wallMembrane": true,
+                                "minimumFallToDrain": 1.50,
+                                "localFallAroundDrain": 3.0,
+                                "minimumHeightWallMembrane": 2.0
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "basement": {
+            "title": "Kjeller og rom under terreng",
+            "sections": {
+                "moisture": {
+                    "requirements": [
+                        {
+                            "code": "§13-14",
+                            "description": "Bygningsdeler under terreng",
+                            "specifications": {
+                                "waterproofing": true,
+                                "drainage": true,
+                                "ventilation": true,
+                                "minimumCeilingHeight": 2.2
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}
