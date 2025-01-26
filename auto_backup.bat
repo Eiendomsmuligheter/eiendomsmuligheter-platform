@@ -1,7 +1,8 @@
 @echo off 
 :backup_loop 
 timeout /t 60 /nobreak 
-git -C "C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter" add . 
-git -C "C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter" commit -m "Auto-backup %date% %time%" 
-git -C "C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter" push 
+cd "C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter" 
+git add . 
+git commit -m "Auto-backup %date% %time%" 
+git push origin main 
 goto backup_loop 
