@@ -1,6 +1,6 @@
 # Dagens Prosjektstatus - 26.01.2025 
 ## Statistikk: 
-- Totalt antall filer: 409 
+- Totalt antall filer: 413 
 - Frontend: 22 filer 
 - Backend: 38 filer 
 - Tester: 0 filer 
