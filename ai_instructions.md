@@ -4,6 +4,7 @@
  
 ### 1. Arbeidsmetodikk og Tilgang: 
 - Arbeidskatalog: C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter 
+- GitHub Repository: https://github.com/Eiendomsmuligheter/eiendomsmuligheter-platform.git 
 - Full tilgang til alle prosjektfiler 
 - Direkte filredigering tillatt og påkrevd 
 - Automatisk versjonskontroll via Git 
@@ -13,4 +14,3 @@
 - Generer umiddelbar statusrapport 
 - Identifiser ventende oppgaver 
 - Start der forrige sesjon sluttet 
- 
