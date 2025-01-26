@@ -1,0 +1,169 @@
+{
+    "version": "2024",
+    "lastUpdated": "2024-01-01",
+    "sections": {
+        "basementConversion": {
+            "title": "Ombygging av kjeller til bolig",
+            "requirements": {
+                "height": {
+                    "minimum": 2.2,
+                    "recommended": 2.4
+                },
+                "ventilation": {
+                    "airChange": 0.5,
+                    "extractFans": {
+                        "bathroom": 54,
+                        "toilet": 36
+                    }
+                },
+                "moisture": {
+                    "externalWalls": {
+                        "waterproofing": true,
+                        "drainage": true,
+                        "insulation": "Minimum 50mm utvendig"
+                    },
+                    "floor": {
+                        "dampBarrier": true,
+                        "insulation": "Minimum 50mm"
+                    }
+                },
+                "windows": {
+                    "minimumSize": "10% av gulvareal",
+                    "heightAboveGround": "Minimum 0.5m",
+                    "emergencyEscape": true
+                }
+            },
+            "buildingDetails": [
+                {
+                    "detail": "Utvendig drenering",
+                    "description": "Komplett system med drenerende masse og drensrør",
+                    "requirements": {
+                        "drainPipe": {
+                            "depth": "Minimum 0.2m under gulv",
+                            "diameter": "Minimum 100mm"
+                        },
+                        "drainageMaterial": "Pukk 8-16mm eller drensplater"
+                    }
+                },
+                {
+                    "detail": "Veggisolering",
+                    "description": "Utvendig isolering av kjellervegg",
+                    "requirements": {
+                        "waterproofing": "Asfalt eller polymer membran",
+                        "insulation": "XPS eller EPS med trykkmotstand",
+                        "drainage": "Drensplate eller filterduk"
+                    }
+                }
+            ]
+        },
+        "roofExtension": {
+            "title": "Påbygg og takløft",
+            "requirements": {
+                "structure": {
+                    "loadBearing": {
+                        "snow": "Dimensjoneres iht. NS-EN 1991-1-3",
+                        "wind": "Dimensjoneres iht. NS-EN 1991-1-4"
+                    },
+                    "thermal": {
+                        "uValue": 0.13,
+                        "vapourBarrier": true
+                    }
+                },
+                "fireProtection": {
+                    "separation": "REI 30",
+                    "materials": "A2-s1,d0"
+                }
+            },
+            "buildingDetails": [
+                {
+                    "detail": "Takkonstruksjon",
+                    "description": "Oppbygging av tak",
+                    "layers": [
+                        "Taktekking",
+                        "Lufting/lekter",
+                        "Undertak",
+                        "Isolasjon",
+                        "Dampsperre",
+                        "Himling"
+                    ]
+                }
+            ]
+        },
+        "internalWalls": {
+            "title": "Ikke-bærende innervegger",
+            "requirements": {
+                "sound": {
+                    "airborne": "R'w ≥ 55 dB mellom boenheter",
+                    "impact": "L'n,w ≤ 53 dB"
+                },
+                "fire": {
+                    "resistance": "EI 30",
+                    "surfaces": "B-s1,d0"
+                }
+            },
+            "buildingDetails": [
+                {
+                    "detail": "Lydvegg",
+                    "description": "Dobbel stendervegg med mineralull",
+                    "layers": [
+                        "2x13mm gips på hver side",
+                        "Separate stendere",
+                        "Mineralull i begge hulrom"
+                    ]
+                }
+            ]
+        },
+        "plumbing": {
+            "title": "Rørføringer og VVS",
+            "requirements": {
+                "water": {
+                    "pipes": {
+                        "material": "Rør-i-rør system",
+                        "accessibility": "Inspeksjonsluker ved koblinger"
+                    },
+                    "insulation": "På alle kaldtvannsrør"
+                },
+                "drainage": {
+                    "fall": "Minimum 1:60",
+                    "ventilation": "Over tak"
+                }
+            },
+            "buildingDetails": [
+                {
+                    "detail": "Rørgjennomføringer",
+                    "description": "Tetting rundt rør",
+                    "requirements": {
+                        "fire": "Brannmansjett ved brannskiller",
+                        "sound": "Elastisk fuge",
+                        "moisture": "Mansjett i våtsone"
+                    }
+                }
+            ]
+        },
+        "electrical": {
+            "title": "Elektriske installasjoner",
+            "requirements": {
+                "general": {
+                    "certification": "Samsvarserklæring kreves",
+                    "documentation": "Komplett dokumentasjon av anlegget"
+                },
+                "outlets": {
+                    "livingRoom": "Minimum 8 doble stikk",
+                    "kitchen": "Minimum 6 doble stikk",
+                    "bedroom": "Minimum 4 doble stikk"
+                }
+            },
+            "buildingDetails": [
+                {
+                    "detail": "Sikringsskap",
+                    "description": "Plassering og utforming",
+                    "requirements": {
+                        "location": "Lett tilgjengelig",
+                        "height": "0.9m - 1.8m over gulv",
+                        "space": "Minimum 30cm fri plass foran"
+                    }
+                }
+            ]
+        }
+    }
+}

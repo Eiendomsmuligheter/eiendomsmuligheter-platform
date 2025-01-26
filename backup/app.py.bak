@@ -1,0 +1,235 @@
+import streamlit as st
+import requests
+from bs4 import BeautifulSoup
+import json
+import re
+from datetime import datetime
+from rental_analyzer import RentalAnalyzer, BuildingType
+import pandas as pd
+import plotly.express as px
+
+# Konfigurasjon for sideoppsett
+st.set_page_config(
+    page_title="EiendomsAI",
+    page_icon="🏠",
+    layout="wide"
+)
+
+# Initialiser rental analyzer
+rental_analyzer = RentalAnalyzer()
+
+# Funksjoner for eiendomsanalyse
+def analyze_finn_listing(url):
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Grunnleggende informasjon
+        data = {
+            "title": soup.find("h1").text if soup.find("h1") else "Ikke funnet",
+            "price": soup.find("div", {"class": "price"}).text if soup.find("div", {"class": "price"}) else "Ikke funnet",
+            "size": soup.find("div", {"class": "size"}).text if soup.find("div", {"class": "size"}) else "Ikke funnet",
+            "location": soup.find("div", {"class": "location"}).text if soup.find("div", {"class": "location"}) else "Ikke funnet"
+        }
+        
+        return data
+    except Exception as e:
+        return {"error": str(e)}
+
+def calculate_rental_potential(size, location):
+    # Dette er en forenklet kalkulator som kan utvides med mer nøyaktige data
+    base_rate = 200  # NOK per kvm
+    location_multiplier = {
+        "Oslo": 1.5,
+        "Bergen": 1.3,
+        "Trondheim": 1.2,
+        "Andre": 1.0
+    }
+    
+    multiplier = location_multiplier.get(location, 1.0)
+    monthly_potential = size * base_rate * multiplier
+    
+    return monthly_potential
+
+def check_regulations(location, property_type):
+    # Dette kan utvides med faktiske reguleringer fra kommunale API-er
+    regulations = {
+        "Oslo": {
+            "leilighet": {
+                "min_size": 40,
+                "parking_required": True,
+                "max_height": "4 etasjer"
+            }
+        }
+    }
+    
+    return regulations.get(location, {}).get(property_type, "Ingen spesifikke regler funnet")
+
+# Sidebar
+st.sidebar.title("EiendomsAI Verktøy")
+tool_choice = st.sidebar.selectbox(
+    "Velg verktøy",
+    ["FINN.no Analyse", "Utleiekalkulator", "Reguleringssjekk"]
+)
+
+# Hovedinnhold
+st.title("EiendomsAI - Din Digitale Eiendomsrådgiver")
+
+if tool_choice == "FINN.no Analyse":
+    st.header("Analyser FINN.no Annonse")
+    finn_url = st.text_input("Lim inn FINN.no URL")
+    
+    if st.button("Analyser"):
+        if finn_url:
+            with st.spinner("Analyserer annonsen..."):
+                result = analyze_finn_listing(finn_url)
+                st.json(result)
+        else:
+            st.warning("Vennligst lim inn en FINN.no URL")
+
+elif tool_choice == "Utleiekalkulator":
+    st.header("Avansert Utleieanalyse")
+    
+    # Lag kolonner for bedre layout
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Grunnleggende Informasjon")
+        size = st.number_input("Størrelse (kvm)", min_value=0, value=50)
+        location = st.selectbox("Kommune", ["Oslo", "Bergen", "Trondheim", "Andre"])
+        building_type = st.selectbox("Boligtype", 
+                                   [type.value for type in BuildingType])
+        
+        st.subheader("Tekniske Detaljer")
+        ceiling_height = st.number_input("Takhøyde (meter)", 
+                                       min_value=1.5, 
+                                       max_value=5.0, 
+                                       value=2.4,
+                                       step=0.1)
+        has_window = st.checkbox("Har vindu", value=True)
+        window_size = st.number_input("Vindusareal (kvm)", 
+                                    min_value=0.0, 
+                                    value=1.0) if has_window else 0
+        
+    with col2:
+        st.subheader("Sikkerhet og Tilgang")
+        has_separate_entrance = st.checkbox("Separat inngang", value=True)
+        has_fire_alarm = st.checkbox("Brannvarslingssystem", value=True)
+        has_escape_route = st.checkbox("Godkjent rømningsvei", value=True)
+        
+        st.subheader("Ventilasjon og Inneklima")
+        ventilation_type = st.selectbox("Ventilasjonstype", 
+                                      ["Naturlig", "Mekanisk", "Balansert"])
+        has_bathroom = st.checkbox("Eget bad", value=True)
+        has_kitchen = st.checkbox("Eget kjøkken", value=True)
+
+    # Samle all informasjon
+    property_data = {
+        "størrelse": size,
+        "takhøyde": ceiling_height,
+        "har_vindu": has_window,
+        "vindusareal": window_size,
+        "separat_inngang": has_separate_entrance,
+        "brannvarsling": has_fire_alarm,
+        "rømningsvei": has_escape_route,
+        "ventilasjon": ventilation_type,
+        "har_bad": has_bathroom,
+        "har_kjøkken": has_kitchen,
+        "boligtype": building_type,
+        "utnyttelsesgrad": 0.20  # Dette burde hentes fra faktisk reguleringsplan
+    }
+    
+    if st.button("Analyser Utleiemuligheter"):
+        with st.spinner("Analyserer muligheter og krav..."):
+            # Kjør analysen
+            analysis_results = rental_analyzer.analyze_property_for_rental(
+                property_data, 
+                location
+            )
+            
+            # Vis resultater i ekspanderbare seksjoner
+            st.subheader("Analyseresultater")
+            
+            # Hovedkonklusjon
+            if analysis_results["kan_leie_ut"]:
+                st.success("✅ Denne delen av boligen kan leies ut!")
+            else:
+                st.error("❌ Det er noen hindringer for utleie som må addresseres")
+            
+            # Oppfylte krav
+            with st.expander("✓ Oppfylte Krav"):
+                for krav in analysis_results["krav_oppfylt"]:
+                    st.write(f"✓ {krav}")
+            
+            # Manglende krav
+            if analysis_results["manglende_krav"]:
+                with st.expander("⚠️ Krav Som Må Oppfylles"):
+                    for krav in analysis_results["manglende_krav"]:
+                        st.write(f"• {krav}")
+            
+            # Kostnadsestimater
+            if analysis_results.get("kostnadsestimate"):
+                with st.expander("💰 Kostnadsestimater"):
+                    costs_df = pd.DataFrame.from_dict(
+                        analysis_results["kostnadsestimate"]["detailed_costs"], 
+                        orient='index',
+                        columns=['Kostnad']
+                    )
+                    st.write("Estimerte kostnader for nødvendige oppgraderinger:")
+                    st.dataframe(costs_df)
+                    
+                    # Vis kostnader som diagram
+                    fig = px.bar(costs_df, 
+                               title="Kostnadsoversikt",
+                               labels={'index': 'Tiltak', 'value': 'Kostnad (NOK)'})
+                    st.plotly_chart(fig)
+            
+            # Tidslinje
+            with st.expander("📅 Prosjekttidslinje"):
+                for fase in analysis_results["tidslinje"]:
+                    st.write(f"**{fase['fase']}** - {fase['varighet']}")
+                    st.write("Aktiviteter:")
+                    for aktivitet in fase["aktiviteter"]:
+                        st.write(f"• {aktivitet}")
+            
+            # Risikofaktorer
+            with st.expander("⚠️ Risikofaktorer og Anbefalinger"):
+                risk_analysis = analysis_results["risiko_analyse"]
+                st.write(f"**Risikonivå:** {risk_analysis['risiko_nivå']}")
+                
+                st.write("**Risikofaktorer:**")
+                for risk in risk_analysis["risiko_faktorer"]:
+                    st.write(f"• {risk}")
+                
+                st.write("**Anbefalinger:**")
+                for rec in risk_analysis["anbefalinger"]:
+                    st.write(f"• {rec}")
+            
+            # Last ned rapport
+            report_text = create_report(analysis_results)
+            st.download_button(
+                label="Last ned fullstendig rapport",
+                data=report_text,
+                file_name="utleieanalyse_rapport.txt",
+                mime="text/plain"
+            )
+
+elif tool_choice == "Reguleringssjekk":
+    st.header("Sjekk Reguleringsbestemmelser")
+    location = st.selectbox("Velg kommune", ["Oslo", "Bergen", "Trondheim"])
+    property_type = st.selectbox("Eiendomstype", ["leilighet", "enebolig", "rekkehus"])
+    
+    if st.button("Sjekk regulering"):
+        regulations = check_regulations(location, property_type)
+        st.info(regulations)
+
+# Chat-funksjonalitet
+st.sidebar.markdown("---")
+st.sidebar.header("Chat med EiendomsAI")
+user_message = st.sidebar.text_input("Skriv din melding her")
+
+if st.sidebar.button("Send"):
+    if user_message:
+        # Her kan du implementere faktisk AI-chat funksjonalitet
+        st.sidebar.write(f"Du: {user_message}")
+        st.sidebar.write("AI: Takk for din melding! Dette er en demo-versjon av chat-funksjonen.")

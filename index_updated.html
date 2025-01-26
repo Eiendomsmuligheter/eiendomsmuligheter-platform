@@ -1,0 +1,2708 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EiendomsAI | Fremtidens Eiendomsanalyse</title>
+    <!-- Bootstrap og andre avhengigheter -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 3D Rendering og Visualisering -->
+    <script src="https://cdn.jsdelivr.net/npm/@babylonjs/core@5.0.0/babylon.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babylonjs/loaders@5.0.0/babylonjs.loaders.min.js"></script>
+    <!-- Material Design Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.5.95/css/materialdesignicons.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2D46B9;
+            --secondary-color: #0ED3CF;
+            --accent-color: #F9A826;
+            --success-color: #10B981;
+            --warning-color: #FF6B6B;
+            --dark-bg: #0f172a;
+            --darker-bg: #070b15;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --primary-gradient: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        body {
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            font-family: 'Poppins', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .gradient-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(7, 11, 21, 0.95) 0%, 
+                rgba(15, 23, 42, 0.85) 100%
+            );
+            z-index: 0;
+        }
+
+        .background-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+            background: url('https://k2info.w.uib.no/files/2024/11/ai-banner-800x450_tcm100-7204059_tcm100-6286607-32.jpg') center/cover no-repeat;
+        }
+
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+        }
+
+        .modern-floorplan {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: var(--glass-bg);
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 2rem 0;
+        }
+
+        .modern-floorplan img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .regulation-section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+            padding: 2rem;
+            margin: 2rem 0;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .regulation-card {
+            background: rgba(45, 70, 185, 0.1);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .regulation-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(14, 211, 207, 0.2);
+            border-color: var(--secondary-color);
+        }
+
+        .visualization-section {
+            position: relative;
+            min-height: 600px;
+            margin: 3rem 0;
+        }
+
+        .visualization-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            background: var(--glass-bg);
+            padding: 1rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-button {
+            background: var(--primary-gradient);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(14, 211, 207, 0.3);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .result-card {
+            background: var(--glass-bg);
+            border-radius: 15px;
+            padding: 1.5rem;
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+        }
+
+        .result-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--secondary-color);
+            box-shadow: 0 10px 30px rgba(14, 211, 207, 0.2);
+        }
+
+        .navbar {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+        }
+
+        .hero-section {
+            min-height: 80vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            padding: 4rem 0;
+            background: url('https://k2info.w.uib.no/files/2024/11/ai-banner-800x450_tcm100-7204059_tcm100-6286607-32.jpg') center/cover no-repeat;
+        }
+        
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.7) 100%);
+            backdrop-filter: blur(5px);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at top right, 
+                                    rgba(45, 70, 185, 0.1), 
+                                    transparent 70%);
+            pointer-events: none;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--card-shadow);
+            border-color: var(--secondary-color);
+        }
+
+        /* 3D Plantegning Stil */
+        .floorplan-3d {
+            position: relative;
+            perspective: 1000px;
+            width: 100%;
+            height: 400px;
+            margin: 2rem 0;
+        }
+
+        .floorplan-container {
+            position: relative;
+            transform-style: preserve-3d;
+            transition: all 0.5s ease;
+            width: 100%;
+            height: 100%;
+        }
+
+        .floorplan-level {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(45, 70, 185, 0.1);
+            border: 2px solid var(--secondary-color);
+            border-radius: 15px;
+            padding: 20px;
+            transform-style: preserve-3d;
+        }
+
+        .room {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--secondary-color);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            padding: 10px;
+            transform-style: preserve-3d;
+            transition: all 0.3s ease;
+        }
+
+        .room:hover {
+            background: rgba(14, 211, 207, 0.2);
+            transform: translateZ(20px);
+            box-shadow: 0 0 20px rgba(14, 211, 207, 0.3);
+        }
+
+        .room-label {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .room-size {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .wall {
+            position: absolute;
+            background: var(--secondary-color);
+            transform-style: preserve-3d;
+        }
+
+        .wall-vertical {
+            width: 2px;
+            height: 100%;
+        }
+
+        .wall-horizontal {
+            height: 2px;
+            width: 100%;
+        }
+
+        /* 3D Hover Effect */
+        .floorplan-container:hover {
+            transform: rotateX(20deg) rotateY(-20deg);
+        }
+
+        /* Glowing Effects */
+        .glow-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, 
+                                    var(--secondary-color) 0%, 
+                                    transparent 70%);
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        /* Grid Overlay */
+        .grid-overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+        }
+        .glass-effect {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px;
+        }
+        #chatbot {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 380px;
+            background: var(--darker-bg);
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            z-index: 1000;
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+        }
+
+        #chatbot:hover {
+            transform: translateY(-5px);
+            border-color: var(--secondary-color);
+        }
+
+        .chatbot-header {
+            background: var(--primary-gradient);
+            padding: 1rem;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chatbot-title {
+            color: var(--text-primary);
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chat-messages {
+            height: 350px;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .chat-message {
+            padding: 1rem;
+            border-radius: 12px;
+            max-width: 80%;
+            animation: messageSlide 0.3s ease;
+        }
+
+        .chat-message.user {
+            background: var(--primary-gradient);
+            color: var(--text-primary);
+            align-self: flex-end;
+        }
+
+        .chat-message.ai {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            align-self: flex-start;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chat-input-container {
+            padding: 1rem;
+            border-top: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 0 0 20px 20px;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 2px rgba(14, 211, 207, 0.2);
+        }
+
+        .chat-send-button {
+            background: var(--primary-gradient);
+            color: var(--text-primary);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .chat-send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(45, 70, 185, 0.3);
+        }
+        .upload-area {
+            border: 2px dashed var(--glass-border);
+            padding: 2rem;
+            text-align: center;
+            margin: 1.5rem 0;
+            cursor: pointer;
+            border-radius: 16px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.02);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: var(--secondary-color);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, 
+                                    rgba(45, 70, 185, 0.1), 
+                                    transparent 70%);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .upload-area:hover::before {
+            opacity: 1;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+        }
+
+        .upload-text {
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .url-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .url-input:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 2px rgba(14, 211, 207, 0.2);
+            outline: none;
+        }
+
+        .analyze-button {
+            background: var(--primary-gradient);
+            color: var(--text-primary);
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .analyze-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(45, 70, 185, 0.3);
+        }
+        .result-section {
+            margin: 2rem 0;
+            padding: 2.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary-gradient);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.5s ease;
+        }
+
+        .result-section:hover::before {
+            transform: scaleX(1);
+        }
+
+        .result-section h3 {
+            color: var(--text-primary);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+        }
+
+        .result-section .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .result-section:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--card-shadow);
+            border-color: var(--secondary-color);
+        }
+
+        .result-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at top right, 
+                                    rgba(45, 70, 185, 0.05), 
+                                    transparent 70%);
+            pointer-events: none;
+        }
+
+        .floorplan-container {
+            position: relative;
+            perspective: 1000px;
+            margin: 2rem 0;
+        }
+
+        .floorplan-view {
+            transform-style: preserve-3d;
+            transition: transform 0.5s ease;
+        }
+
+        .floorplan-view:hover {
+            transform: rotateX(10deg) rotateY(10deg);
+        }
+
+        .floorplan-image {
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .analysis-result {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            animation: slideInFromRight 0.6s ease-out;
+        }
+
+        @keyframes slideInFromRight {
+            from {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .analysis-result::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(
+                circle at center,
+                rgba(255, 255, 255, 0.1) 0%,
+                transparent 60%
+            );
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            transform: translate3d(0, 0, 0);
+        }
+
+        .analysis-result:hover::after {
+            opacity: 1;
+        }
+
+        .analysis-result:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--secondary-color);
+        }
+
+        .analysis-stat {
+            font-size: 2rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .analysis-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .requirement-item {
+            display: flex;
+            align-items: center;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .requirement-icon {
+            font-size: 1.5rem;
+            margin-right: 1rem;
+            color: var(--success-color);
+        }
+
+        .requirement-warning {
+            color: var(--warning-color);
+        }
+        #resultContainer {
+            display: none;
+        }
+        .chat-messages {
+            height: 300px;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        .progress {
+            height: 12px;
+            margin: 15px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+        }
+        
+        .progress-bar {
+            background: var(--primary-gradient);
+            transition: width 0.5s ease;
+            position: relative;
+        }
+        
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0.1) 25%,
+                rgba(255, 255, 255, 0.2) 50%,
+                rgba(255, 255, 255, 0.1) 75%
+            );
+            animation: progressShine 2s linear infinite;
+        }
+        
+        @keyframes progressShine {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(100%); }
+        }
+        
+        .progress-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .progress-status {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <!-- Gradient Overlay -->
+    <div class="gradient-overlay"></div>
+    
+    <!-- Background Animation -->
+    <div class="background-animation"></div>
+    
+    <!-- Main Content -->
+    <div class="content-wrapper">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+            <div class="container">
+                <a class="navbar-brand" href="#">
+                    <i class="mdi mdi-home-analytics me-2"></i>
+                    EiendomsAI
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#features">
+                                <i class="mdi mdi-feature-search me-1"></i>
+                                Funksjoner
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#regulations">
+                                <i class="mdi mdi-book-open-page-variant me-1"></i>
+                                Regelverk
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#visualization">
+                                <i class="mdi mdi-view-3d me-1"></i>
+                                3D Visning
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-lg-6">
+                        <h1 class="display-4 fw-bold mb-4">Optimaliser din eiendom med AI</h1>
+                        <p class="lead mb-4">Automatisk analyse av utleiemuligheter med full dokumentasjon av alle lover og regler.</p>
+                        <div class="d-flex gap-3">
+                            <button class="btn btn-primary btn-lg">Start Analyse</button>
+                            <button class="btn btn-outline-light btn-lg">Se Demo</button>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="modern-floorplan">
+                            <img src="https://img.freepik.com/premium-photo/interior-design-with-modern-concept-furniture-layout_764664-24379.jpg" alt="Modern 3D Floorplan">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Opplasting og URL-seksjon -->
+        <section id="upload-section" class="py-5">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8">
+                        <div class="glass-effect p-4">
+                            <h3 class="text-center mb-4">Start din analyse</h3>
+                            <div class="upload-area mb-4">
+                                <i class="mdi mdi-cloud-upload display-4"></i>
+                                <p>Last opp plantegning eller URL</p>
+                                <input type="file" id="file-upload" class="d-none">
+                                <label for="file-upload" class="btn btn-outline-primary">Velg fil</label>
+                            </div>
+                            <!-- URL input -->
+                            <div class="form-group mb-4">
+                                <input type="text" class="form-control url-input" placeholder="Eller lim inn URL til plantegning">
+                            </div>
+                            <button class="analyze-button w-100" onclick="startAnalysis()">
+                                <i class="mdi mdi-magnify me-2"></i>Start analyse
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="py-5">
+            <div class="container">
+                <h2 class="text-center mb-5">Automatisert Analyse</h2>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="feature-card">
+                            <i class="mdi mdi-ruler-square-compass display-4 mb-3"></i>
+                            <h3>Plantegningsanalyse</h3>
+                            <p>Automatisk analyse av eksisterende plantegninger og generering av nye løsninger.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="feature-card">
+                            <i class="mdi mdi-gavel display-4 mb-3"></i>
+                            <h3>Regelverk Sjekk</h3>
+                            <p>Komplett analyse mot alle relevante lover og forskrifter med dokumentasjon.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="feature-card">
+                            <i class="mdi mdi-view-3d display-4 mb-3"></i>
+                            <h3>3D Visualisering</h3>
+                            <p>Fotorealistiske 3D-visualiseringer av nye løsninger med møbler og materialer.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Regulations Section -->
+        <section id="regulations" class="py-5">
+            <div class="container">
+                <h2 class="text-center mb-5">Komplett Regelverksanalyse</h2>
+                <div class="regulation-section">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="regulation-card">
+                                <h4><i class="mdi mdi-fire me-2"></i>Brannsikkerhet</h4>
+                                <ul class="list-unstyled">
+                                    <li>✓ Rømningsveier</li>
+                                    <li>✓ Brannceller</li>
+                                    <li>✓ Materialkrav</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="regulation-card">
+                                <h4><i class="mdi mdi-sun-wireless me-2"></i>Lys og Ventilasjon</h4>
+                                <ul class="list-unstyled">
+                                    <li>✓ Dagslysberegninger</li>
+                                    <li>✓ Luftmengder</li>
+                                    <li>✓ Tekniske krav</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Visualization Section -->
+        <section id="visualization" class="py-5">
+            <div class="container">
+                <h2 class="text-center mb-5">3D Visualisering</h2>
+                <div class="visualization-section">
+                    <canvas id="3d-view" class="w-100 h-100"></canvas>
+                    <div class="visualization-controls">
+                        <button class="control-button" onclick="rotateView('left')">
+                            <i class="mdi mdi-rotate-left"></i>
+                        </button>
+                        <button class="control-button" onclick="rotateView('right')">
+                            <i class="mdi mdi-rotate-right"></i>
+                        </button>
+                        <button class="control-button" onclick="toggleFurniture()">
+                            <i class="mdi mdi-sofa"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+
+        <!-- Results Section -->
+        <section id="results" class="py-5 d-none">
+            <div class="container">
+                <h2 class="text-center mb-5">Analyseresultater</h2>
+                <div class="results-grid">
+                    <!-- Resultater vil bli lagt til her dynamisk -->
+                </div>
+            </div>
+        </section>
+    <div id="particles-js"></div>
+    
+    <nav class="navbar navbar-dark fixed-top">
+        <div class="container">
+            <span class="navbar-brand">EiendomsAI</span>
+            <div class="d-flex gap-3">
+                <a href="#hvordan-fungerer-det" class="btn btn-outline-light">Hvordan fungerer det?</a>
+                <button class="btn btn-primary" onclick="toggleChat()">Chat med AI</button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <div class="hero-content">
+                        <span class="badge bg-primary mb-3">AI-Drevet Boligoptimalisering</span>
+                        <h1 class="display-4 fw-bold mb-4">Maksimer verdien av din bolig med kunstig intelligens</h1>
+                        <p class="lead mb-4">Vår innovative AI-plattform analyserer din bolig og finner skjulte muligheter for utleie og verdiskapning. Fra plantegning til ferdig søknad - vi gjør prosessen enkel og effektiv.</p>
+                        <button class="cta-button" onclick="document.getElementById('analyseSection').scrollIntoView({behavior: 'smooth'})">
+                            Start din analyse nå
+                        </button>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="position-relative">
+                        <img src="modern_3d_blueprint.jpg" alt="3D Plantegning" class="img-fluid rounded-4 shadow-lg">
+                        <div class="position-absolute top-0 start-0 w-100 h-100 bg-gradient-overlay"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="analyseSection" class="py-5">
+        <div class="container">
+            <div class="row">
+                <!-- Venstre kolonne - Input -->
+                <div class="col-lg-4">
+                    <div class="glass-effect">
+                        <h4 class="mb-4">Start din analyse</h4>
+                        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                            <p class="upload-text">Last opp plantegning eller bilder</p>
+                            <p class="small text-muted">Støtter JPG, PNG og PDF</p>
+                            <input type="file" id="fileInput" hidden accept="image/*,.pdf">
+                        </div>
+                        <div class="mt-4">
+                            <label class="text-secondary mb-2">Eller analyser fra FINN.no</label>
+                            <input type="text" class="form-control url-input mb-3" placeholder="Lim inn FINN.no URL her">
+                            <button class="analyze-button w-100" onclick="startAnalysis()">
+                                Start AI Analyse
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Høyre kolonne - Resultater -->
+                <div class="col-lg-8">
+                    <!-- Velkomstskjerm -->
+                    <div id="welcomeScreen" class="glass-effect">
+                        <h2 class="text-gradient mb-4">Velkommen til EiendomsAI</h2>
+                        <div class="row g-4">
+                            <div class="col-md-4">
+                                <div class="feature-card">
+                                    <i class="fas fa-robot mb-3 text-primary"></i>
+                                    <h5>AI-Drevet Analyse</h5>
+                                    <p>Rask og presis analyse av din bolig</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="feature-card">
+                                    <i class="fas fa-chart-line mb-3 text-primary"></i>
+                                    <h5>Økt Verdi</h5>
+                                    <p>Identifiser skjulte inntektsmuligheter</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="feature-card">
+                                    <i class="fas fa-file-alt mb-3 text-primary"></i>
+                                    <h5>Automatisert Søknad</h5>
+                                    <p>Fra analyse til ferdig søknad</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                <!-- Resultatvisning -->
+                <div id="resultContainer" class="glass-effect" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3 class="mb-0">AI Analyse</h3>
+                        <div class="progress-wrapper">
+                            <div class="progress" style="width: 200px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     role="progressbar" 
+                                     id="analysisProgress">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 3D Plantegningsanalyse -->
+                    <div class="result-section">
+                        <h4 class="mb-4">3D Plantegningsanalyse</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Nåværende Plantegning</h5>
+                                <div class="floorplan-3d">
+                                    <div class="floorplan-container">
+                                        <!-- Base Level -->
+                                        <div class="floorplan-level">
+                                            <div class="grid-overlay"></div>
+                                            
+                                            <!-- Stue -->
+                                            <div class="room" style="top: 10%; left: 10%; width: 40%; height: 40%;">
+                                                <div class="room-label">Stue</div>
+                                                <div class="room-size">25m²</div>
+                                                <div class="glow-effect"></div>
+                                            </div>
+                                            
+                                            <!-- Kjøkken -->
+                                            <div class="room" style="top: 10%; right: 10%; width: 30%; height: 40%;">
+                                                <div class="room-label">Kjøkken</div>
+                                                <div class="room-size">15m²</div>
+                                                <div class="glow-effect"></div>
+                                            </div>
+                                            
+                                            <!-- Soverom -->
+                                            <div class="room" style="bottom: 10%; left: 10%; width: 35%; height: 35%;">
+                                                <div class="room-label">Soverom</div>
+                                                <div class="room-size">18m²</div>
+                                                <div class="glow-effect"></div>
+                                            </div>
+                                            
+                                            <!-- Bad -->
+                                            <div class="room" style="bottom: 10%; right: 10%; width: 20%; height: 35%;">
+                                                <div class="room-label">Bad</div>
+                                                <div class="room-size">8m²</div>
+                                                <div class="glow-effect"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="mb-3">AI-Optimalisert Løsning</h5>
+                                <div class="floorplan-3d">
+                                    <div class="floorplan-container">
+                                        <!-- Base Level -->
+                                        <div class="floorplan-level">
+                                            <div class="grid-overlay"></div>
+                                            
+                                            <!-- Hovedutleieenhet -->
+                                            <div class="room" style="top: 10%; left: 10%; width: 55%; height: 80%;">
+                                                <div class="room-label">Hovedutleieenhet</div>
+                                                <div class="room-size">65m²</div>
+                                                <div class="glow-effect"></div>
+                                                
+                                                <!-- Inndeling -->
+                                                <div class="wall wall-horizontal" style="top: 40%; left: 0; width: 100%;"></div>
+                                                <div class="wall wall-vertical" style="top: 0; left: 40%; height: 40%;"></div>
+                                            </div>
+                                            
+                                            <!-- Sekundær utleieenhet -->
+                                            <div class="room" style="top: 10%; right: 10%; width: 25%; height: 80%;">
+                                                <div class="room-label">Sekundær enhet</div>
+                                                <div class="room-size">35m²</div>
+                                                <div class="glow-effect"></div>
+                                                
+                                                <!-- Inndeling -->
+                                                <div class="wall wall-horizontal" style="top: 50%; left: 0; width: 100%;"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Interaktiv Guide -->
+                        <div class="mt-4 p-3 glass-effect">
+                            <h5 class="mb-3">Interaktiv 3D-guide</h5>
+                            <p class="text-secondary mb-2">Hover over rommene for å se detaljer. Beveg musen over plantegningen for 3D-effekt.</p>
+                            <div class="d-flex gap-3">
+                                <span class="badge bg-primary">Total areal: 100m²</span>
+                                <span class="badge bg-success">Utleiepotensial: 2 enheter</span>
+                                <span class="badge bg-info">Estimert leieinntekt: 20,000 kr/mnd</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Utleiemuligheter -->
+                    <div class="result-section">
+                        <h4 class="mb-4">Utleiepotensial</h4>
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <div class="analysis-result">
+                                    <div class="analysis-stat">12,000 kr</div>
+                                    <div class="analysis-label">Estimert månedlig leieinntekt</div>
+                                    <ul class="list-unstyled mt-3">
+                                        <li><i class="fas fa-check text-success me-2"></i> 2 soverom</li>
+                                        <li><i class="fas fa-check text-success me-2"></i> 65m² boareal</li>
+                                        <li><i class="fas fa-check text-success me-2"></i> Egen inngang</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <div class="analysis-result">
+                                    <div class="analysis-stat">8,000 kr</div>
+                                    <div class="analysis-label">Ekstra utleiemulighet</div>
+                                    <ul class="list-unstyled mt-3">
+                                        <li><i class="fas fa-check text-success me-2"></i> 1 soverom</li>
+                                        <li><i class="fas fa-check text-success me-2"></i> 35m² boareal</li>
+                                        <li><i class="fas fa-check text-success me-2"></i> Kombinert stue/kjøkken</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tekniske Krav -->
+                    <div class="result-section">
+                        <h4 class="mb-4">Tekniske Krav og Tilpasninger</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="requirement-item">
+                                    <i class="fas fa-fire-extinguisher requirement-icon"></i>
+                                    <div>
+                                        <h5 class="mb-1">Brannsikring</h5>
+                                        <p class="mb-0 text-secondary">Oppfyller kravene med mindre tilpasninger</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="requirement-item">
+                                    <i class="fas fa-wind requirement-icon"></i>
+                                    <div>
+                                        <h5 class="mb-1">Ventilasjon</h5>
+                                        <p class="mb-0 text-secondary">Krever oppgradering av system</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="requirement-item">
+                                    <i class="fas fa-ruler-vertical requirement-icon requirement-warning"></i>
+                                    <div>
+                                        <h5 class="mb-1">Takhøyde</h5>
+                                        <p class="mb-0 text-secondary">Må økes i deler av kjeller</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="requirement-item">
+                                    <i class="fas fa-volume-mute requirement-icon"></i>
+                                    <div>
+                                        <h5 class="mb-1">Lydkrav</h5>
+                                        <p class="mb-0 text-secondary">Installasjon av lydisolering nødvendig</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Handling Buttons -->
+                    <div class="d-flex gap-3 mt-4">
+                        <button class="btn btn-primary flex-grow-1" onclick="downloadReport()">
+                            <i class="fas fa-download me-2"></i>Last ned fullstendig rapport
+                        </button>
+                        <button class="btn btn-outline-light" onclick="toggleChat()">
+                            <i class="fas fa-comments me-2"></i>Diskuter med AI
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chatbot -->
+    <div id="chatbot" style="display: none;">
+        <div class="chatbot-header">
+            <h5 class="chatbot-title">
+                <i class="fas fa-robot me-2"></i>
+                AI Assistent
+            </h5>
+            <button class="btn btn-sm btn-light" onclick="toggleChat()">×</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-message ai">
+                Hei! Jeg er din AI-assistent for boliganalyse. Hvordan kan jeg hjelpe deg i dag?
+            </div>
+        </div>
+        <div class="chat-input-container">
+            <div class="input-group">
+                <input type="text" class="chat-input" id="chatInput" 
+                       placeholder="Still et spørsmål..." 
+                       onkeypress="if(event.keyCode===13) sendMessage()">
+                <button class="chat-send-button" onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Klasse for å håndtere regelverksanalyse
+        class RegulationAnalyzer {
+            constructor() {
+                this.regulations = {
+                    'TEK17': {
+                        'brann': this._loadFireRegulations(),
+                        'lys': this._loadLightingRegulations(),
+                        'ventilasjon': this._loadVentilationRegulations(),
+                        'rom': this._loadRoomRegulations()
+                    }
+                };
+            }
+
+            _loadFireRegulations() {
+                return {
+                    'rømningsvei': {
+                        'krav': {
+                            'bredde': 0.9,
+                            'høyde': 2.1,
+                            'maksAvstand': 30
+                        },
+                        'dokumentasjonskrav': [
+                            'Plantegning med rømningsveier',
+                            'Beregning av rømningsavstander',
+                            'Branncellebegrensende konstruksjoner'
+                        ]
+                    },
+                    'brannmotstand': {
+                        'vegger': {
+                            'mellom_boenheter': 'EI 60',
+                            'mot_fellesareal': 'EI 60'
+                        }
+                    }
+                };
+            }
+
+            _loadLightingRegulations() {
+                return {
+                    'dagslys': {
+                        'faktor': 0.02,
+                        'vindusareal': 0.1,
+                        'dokumentasjonskrav': [
+                            'Dagslysberegninger',
+                            'Vindusspesifikasjoner'
+                        ]
+                    }
+                };
+            }
+
+            _loadVentilationRegulations() {
+                return {
+                    'luftmengder': {
+                        'oppholdsrom': 26,
+                        'soverom': 26,
+                        'kjøkken': 36,
+                        'bad': 54
+                    }
+                };
+            }
+
+            _loadRoomRegulations() {
+                return {
+                    'minimumshøyde': 2.4,
+                    'minimumsareal': {
+                        'soverom': 7,
+                        'stue': 15,
+                        'kjøkken': 6
+                    }
+                };
+            }
+
+            analyzeCompliance(propertyData) {
+                const results = {
+                    brann: this._analyzeFireSafety(propertyData),
+                    lys: this._analyzeLighting(propertyData),
+                    ventilasjon: this._analyzeVentilation(propertyData),
+                    rom: this._analyzeRooms(propertyData)
+                };
+
+                return {
+                    compliant: this._isCompliant(results),
+                    details: results,
+                    documentation: this._generateDocumentation(results)
+                };
+            }
+
+            _analyzeFireSafety(propertyData) {
+                // Implementer brannsikkerhetsanalyse
+                return {
+                    compliant: true,
+                    issues: [],
+                    requirements: []
+                };
+            }
+
+            _analyzeLighting(propertyData) {
+                // Implementer lysanalyse
+                return {
+                    compliant: true,
+                    issues: [],
+                    requirements: []
+                };
+            }
+
+            _analyzeVentilation(propertyData) {
+                // Implementer ventilasjonsanalyse
+                return {
+                    compliant: true,
+                    issues: [],
+                    requirements: []
+                };
+            }
+
+            _analyzeRooms(propertyData) {
+                // Implementer romanalyse
+                return {
+                    compliant: true,
+                    issues: [],
+                    requirements: []
+                };
+            }
+
+            _isCompliant(results) {
+                return Object.values(results).every(r => r.compliant);
+            }
+
+            _generateDocumentation(results) {
+                // Implementer dokumentasjonsgenerering
+                return {
+                    drawings: [],
+                    calculations: [],
+                    certificates: []
+                };
+            }
+        }
+
+        // Klasse for 3D-visualisering
+        class Visualizer {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.engine = new BABYLON.Engine(this.canvas, true);
+                this.scene = new BABYLON.Scene(this.engine);
+                
+                // Sett opp scene
+                this._setupScene();
+                
+                // Start renderingsløkke
+                this.engine.runRenderLoop(() => {
+                    this.scene.render();
+                });
+            }
+
+            _setupScene() {
+                // Kamera
+                this.camera = new BABYLON.ArcRotateCamera(
+                    "camera",
+                    0, Math.PI / 3,
+                    10,
+                    BABYLON.Vector3.Zero(),
+                    this.scene
+                );
+                
+                // Lys
+                this.light = new BABYLON.HemisphericLight(
+                    "light",
+                    new BABYLON.Vector3(0, 1, 0),
+                    this.scene
+                );
+            }
+
+            createFloorPlan(data) {
+                // Slett eksisterende innhold
+                this.scene.meshes.forEach(mesh => mesh.dispose());
+                
+                // Opprett gulv
+                const ground = BABYLON.MeshBuilder.CreateGround(
+                    "ground",
+                    {width: data.width, height: data.height},
+                    this.scene
+                );
+                
+                // Opprett vegger
+                data.walls.forEach(wall => {
+                    this._createWall(wall);
+                });
+                
+                // Opprett rom-etiketter
+                data.rooms.forEach(room => {
+                    this._createRoomLabel(room);
+                });
+
+                // Legg til møbler
+                data.furniture?.forEach(furniture => {
+                    this._createFurniture(furniture);
+                });
+            }
+
+            _createWall(wallData) {
+                const wall = BABYLON.MeshBuilder.CreateBox(
+                    "wall",
+                    {
+                        height: 2.4,
+                        width: wallData.width,
+                        depth: 0.1
+                    },
+                    this.scene
+                );
+                
+                wall.position = new BABYLON.Vector3(
+                    wallData.x,
+                    1.2,
+                    wallData.z
+                );
+                wall.rotation.y = wallData.rotation;
+                
+                // Material
+                const material = new BABYLON.StandardMaterial("wallMat", this.scene);
+                material.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.9);
+                wall.material = material;
+            }
+
+            _createFurniture(furnitureData) {
+                // Last 3D-modell
+                BABYLON.SceneLoader.ImportMesh(
+                    "",
+                    furnitureData.modelPath,
+                    "",
+                    this.scene,
+                    (meshes) => {
+                        const furniture = meshes[0];
+                        furniture.position = new BABYLON.Vector3(
+                            furnitureData.x,
+                            0,
+                            furnitureData.z
+                        );
+                        furniture.rotation.y = furnitureData.rotation;
+                        furniture.scaling = new BABYLON.Vector3(
+                            furnitureData.scale,
+                            furnitureData.scale,
+                            furnitureData.scale
+                        );
+                    }
+                );
+            }
+        }
+
+        // Klasse for dokumentgenerering
+        class DocumentGenerator {
+            constructor() {
+                this.templates = {
+                    'søknad': this._loadApplicationTemplate(),
+                    'rapport': this._loadReportTemplate()
+                };
+            }
+
+            _loadApplicationTemplate() {
+                return {
+                    'header': {
+                        'title': 'Søknad om bruksendring',
+                        'municipality': '',
+                        'date': ''
+                    },
+                    'sections': [
+                        {
+                            'title': 'Eiendomsinformasjon',
+                            'fields': ['gnr', 'bnr', 'adresse']
+                        },
+                        {
+                            'title': 'Tiltakshaver',
+                            'fields': ['navn', 'adresse', 'kontakt']
+                        },
+                        {
+                            'title': 'Tiltaket',
+                            'fields': ['beskrivelse', 'areal', 'etasjer']
+                        }
+                    ]
+                };
+            }
+
+            _loadReportTemplate() {
+                return {
+                    'sections': [
+                        {
+                            'title': 'Brannsikkerhet',
+                            'subsections': [
+                                'Rømningsveier',
+                                'Brannceller',
+                                'Materialkrav'
+                            ]
+                        },
+                        {
+                            'title': 'Dagslys og ventilasjon',
+                            'subsections': [
+                                'Dagslysberegninger',
+                                'Luftmengder'
+                            ]
+                        },
+                        {
+                            'title': 'Romløsning',
+                            'subsections': [
+                                'Romareal',
+                                'Takhøyde',
+                                'Tilgjengelighet'
+                            ]
+                        }
+                    ]
+                };
+            }
+
+            generateApplication(data) {
+                const template = this.templates.søknad;
+                return this._fillTemplate(template, data);
+            }
+
+            generateReport(data) {
+                const template = this.templates.rapport;
+                return this._fillTemplate(template, data);
+            }
+
+            _fillTemplate(template, data) {
+                // Implementer templatefylling
+                return {
+                    content: "Generert innhold basert på data",
+                    attachments: []
+                };
+            }
+        }
+
+        // Initialiser systemet
+        document.addEventListener('DOMContentLoaded', function() {
+            const regulationAnalyzer = new RegulationAnalyzer();
+            const visualizer = new Visualizer('3d-view');
+            const documentGenerator = new DocumentGenerator();
+
+            // Event listeners for brukerinteraksjon
+            document.getElementById('analyze-button')?.addEventListener('click', async function() {
+                const propertyData = await getPropertyData();
+                if (propertyData) {
+                    const analysis = regulationAnalyzer.analyzeCompliance(propertyData);
+                    visualizer.createFloorPlan(propertyData);
+                    const documents = documentGenerator.generateReport(analysis);
+                    
+                    displayResults(analysis, documents);
+                }
+            });
+
+            // Håndter fileopplasting
+            document.getElementById('file-upload')?.addEventListener('change', async function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const propertyData = await processUploadedFile(file);
+                    if (propertyData) {
+                        visualizer.createFloorPlan(propertyData);
+                    }
+                }
+            });
+
+            // Håndter Finn.no URL
+            document.getElementById('finn-url')?.addEventListener('input', async function(e) {
+                const url = e.target.value;
+                if (url.includes('finn.no')) {
+                    const propertyData = await extractFinnData(url);
+                    if (propertyData) {
+                        visualizer.createFloorPlan(propertyData);
+                    }
+                }
+            });
+        });
+
+        // Hjelpefunksjoner
+        async function getPropertyData() {
+            // Implementer datahenting
+            return null;
+        }
+
+        async function processUploadedFile(file) {
+            // Implementer fileprosessering
+            return null;
+        }
+
+        async function extractFinnData(url) {
+            // Implementer Finn.no datahenting
+            return null;
+        }
+
+        function displayResults(analysis, documents) {
+            // Implementer resultatvisning
+        }
+        // Globale variabler for å holde på data
+        let uploadedFile = null;
+        let analysisResults = null;
+
+        // Initialisering når siden lastes
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeParticles();
+            setupEventListeners();
+            initializeChat();
+        });
+
+        // Sett opp particles.js bakgrunn
+
+
+        // Sett opp event listeners
+        function setupEventListeners() {
+            // Filopplasting
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+
+            uploadArea.addEventListener('click', () => fileInput.click());
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('drop', handleDrop);
+            fileInput.addEventListener('change', handleFileSelect);
+
+            // URL-input
+            const urlInput = document.getElementById('urlInput');
+            const analyzeButton = document.getElementById('analyzeButton');
+            analyzeButton.addEventListener('click', () => {
+                const url = urlInput.value.trim();
+                if (url) {
+                    startAnalysis(null, url);
+                }
+            });
+        }
+
+        // Håndter fil-drag-and-drop
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.add('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('dragover');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFiles(files);
+            }
+        }
+
+        // Håndter fil-opplasting
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                handleFiles(files);
+            }
+        }
+
+        function handleFiles(files) {
+            const file = files[0];
+            const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+
+            if (validTypes.includes(file.type)) {
+                uploadedFile = file;
+                startAnalysis(file);
+            } else {
+                showError('Vennligst last opp en gyldig fil (JPEG, PNG eller PDF)');
+            }
+        }
+
+        // Start analysen
+        function startAnalysis(file, url = null) {
+            // Vis laste-indikator
+            showLoadingState();
+
+            // Simuler analyse (i en ekte implementasjon ville dette vært et API-kall)
+            setTimeout(() => {
+                // Generer mock-resultater
+                generateAnalysisResults();
+                
+                // Vis resultater
+                showResults();
+                
+                // Skjul laste-indikator
+                hideLoadingState();
+            }, 3000);
+        }
+
+        // Generer mock analyseresultater
+        function generateAnalysisResults() {
+            analysisResults = {
+                utleiePotensial: {
+                    antallEnheter: 2,
+                    totalAreal: 120,
+                    estimertLeieInntekt: 25000
+                },
+                romfordeling: [
+                    { type: "Leilighet 1", areal: 65, rom: 3 },
+                    { type: "Leilighet 2", areal: 55, rom: 2 }
+                ],
+                tekniskeKrav: {
+                    oppfylt: ["Takhøyde", "Dagslys"],
+                    mangler: ["Brannskille", "Ventilasjon"]
+                },
+                kostnaderOgTiltak: {
+                    totalKostnad: 450000,
+                    hovedPoster: [
+                        { beskrivelse: "Brannskille", kostnad: 150000 },
+                        { beskrivelse: "Ventilasjon", kostnad: 200000 },
+                        { beskrivelse: "Elektrisk", kostnad: 100000 }
+                    ]
+                }
+            };
+        }
+
+
+
+        // Oppdater 3D plantegning
+        function update3DFloorplan() {
+            const floorplanContainer = document.querySelector('.floorplan-3d');
+            
+            // Opprett rom basert på analyseresultater
+            analysisResults.romfordeling.forEach((rom, index) => {
+                const roomElement = createRoomElement(rom, index);
+                floorplanContainer.appendChild(roomElement);
+            });
+        }
+
+        // Opprett et rom-element
+        function createRoomElement(rom, index) {
+            const room = document.createElement('div');
+            room.className = 'room';
+            room.style.left = `${index * 45}%`;
+            room.style.width = `${rom.areal * 0.8}px`;
+            room.style.height = `${rom.areal * 0.6}px`;
+
+            const label = document.createElement('div');
+            label.className = 'room-label';
+            label.textContent = rom.type;
+
+            const size = document.createElement('div');
+            size.className = 'room-size';
+            size.textContent = `${rom.areal}m² | ${rom.rom} rom`;
+
+            room.appendChild(label);
+            room.appendChild(size);
+
+            return room;
+        }
+
+        // Oppdater analyseinformasjon
+        function updateAnalysisInfo() {
+            const infoContainer = document.querySelector('.analysis-info');
+            infoContainer.innerHTML = `
+                <h3>Utleiepotensial</h3>
+                <div class="analysis-stat">${analysisResults.utleiePotensial.antallEnheter} enheter</div>
+                <div class="analysis-label">Estimert leieinntekt: ${analysisResults.utleiePotensial.estimertLeieInntekt} kr/mnd</div>
+            `;
+        }
+
+        // Oppdater kostnader og tiltak
+        function updateCostsAndMeasures() {
+            const costsContainer = document.querySelector('.costs-measures');
+            let html = '<h3>Nødvendige Tiltak</h3>';
+
+            analysisResults.kostnaderOgTiltak.hovedPoster.forEach(post => {
+                html += `
+                    <div class="cost-item">
+                        <div class="cost-description">${post.beskrivelse}</div>
+                        <div class="cost-amount">${post.kostnad.toLocaleString()} kr</div>
+                    </div>
+                `;
+            });
+
+            html += `
+                <div class="total-cost">
+                    <strong>Total kostnad:</strong>
+                    <span>${analysisResults.kostnaderOgTiltak.totalKostnad.toLocaleString()} kr</span>
+                </div>
+            `;
+
+            costsContainer.innerHTML = html;
+        }
+
+        // Animer resultater
+        function animateResults() {
+            const elements = document.querySelectorAll('.result-section');
+            elements.forEach((el, index) => {
+                setTimeout(() => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, index * 200);
+            });
+        }
+
+        // Vis/skjul laste-indikator
+        function showLoadingState() {
+            const loader = document.createElement('div');
+            loader.id = 'analysisLoader';
+            loader.className = 'analysis-loader';
+            loader.innerHTML = `
+                <div class="loader-content">
+                    <div class="spinner"></div>
+                    <div class="loader-text">Analyserer plantegning...</div>
+                </div>
+            `;
+            document.body.appendChild(loader);
+        }
+
+        function hideLoadingState() {
+            const loader = document.getElementById('analysisLoader');
+            if (loader) {
+                loader.remove();
+            }
+        }
+
+        // Vis feilmelding
+        function showError(message) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger animate__animated animate__fadeIn';
+            alert.textContent = message;
+            
+            document.getElementById('errorContainer').appendChild(alert);
+            
+            setTimeout(() => {
+                alert.classList.add('animate__fadeOut');
+                setTimeout(() => alert.remove(), 500);
+            }, 3000);
+        }
+
+        // Chat-funksjonalitet
+        function initializeChat() {
+            const chatInput = document.getElementById('chatInput');
+            const sendButton = document.getElementById('sendMessage');
+
+            if (chatInput && sendButton) {
+                sendButton.addEventListener('click', () => {
+                    const message = chatInput.value.trim();
+                    if (message) {
+                        sendChatMessage(message);
+                        chatInput.value = '';
+                    }
+                });
+
+                chatInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        const message = chatInput.value.trim();
+                        if (message) {
+                            sendChatMessage(message);
+                            chatInput.value = '';
+                        }
+                    }
+                });
+            }
+        }
+
+        function sendChatMessage(message) {
+            // Legg til brukermelding
+            addChatMessage(message, 'user');
+
+            // Simuler AI-svar
+            setTimeout(() => {
+                const aiResponse = generateAIResponse(message);
+                addChatMessage(aiResponse, 'ai');
+            }, 1000);
+        }
+
+
+
+        function generateAIResponse(message) {
+            // Enkelt svar-system (i en ekte implementasjon ville dette vært mer avansert)
+            const responses = {
+                'hei': 'Hei! Hvordan kan jeg hjelpe deg med din eiendom i dag?',
+                'kostnad': 'Basert på vår analyse er estimert total kostnad for ombygging ' + 
+                          analysisResults?.kostnaderOgTiltak?.totalKostnad?.toLocaleString() + ' kr.',
+                'krav': 'De viktigste tekniske kravene inkluderer brannskille, ventilasjon, takhøyde og dagslys.',
+                'default': 'Jeg kan hjelpe deg med å analysere utleiemuligheter, tekniske krav og kostnadsestimater. ' +
+                          'Hva vil du vite mer om?'
+            };
+
+            const lowerMessage = message.toLowerCase();
+            for (const [key, response] of Object.entries(responses)) {
+                if (lowerMessage.includes(key)) {
+                    return response;
+                }
+            }
+            return responses.default;
+        }
+    
+        // Globale variabler og konstanter
+        let analysisStarted = false;
+        let currentProgress = 0;
+        let chatHistory = [];
+        
+        const AI_RESPONSES = {
+            GREETING: "Hei! Jeg er din AI-assistent for boliganalyse. Hvordan kan jeg hjelpe deg i dag?",
+            ANALYSIS: [
+                "Jeg analyserer nå plantegningen din. Dette vil ta noen øyeblikk...",
+                "Jeg har identifisert flere interessante muligheter i din bolig.",
+                "La meg vise deg hvordan du kan optimalisere arealet for utleie.",
+                "Basert på min analyse ser jeg et stort potensial for økte leieinntekter."
+            ],
+            TECHNICAL: [
+                "Her er de viktigste tekniske kravene du må være oppmerksom på...",
+                "For å oppfylle byggeforskriftene må vi gjøre følgende tilpasninger...",
+                "Jeg har sjekket regelverket, og her er hva du trenger å vite...",
+                "La meg forklare de viktigste sikkerhetskravene for utleiedelen."
+            ],
+            FINANCIAL: [
+                "Basert på dagens marked kan du forvente følgende leieinntekter...",
+                "Investeringen vil kunne gi deg en årlig avkastning på...",
+                "Med disse oppgraderingene kan du øke leieinntektene betydelig.",
+                "La meg vise deg en detaljert økonomisk analyse."
+            ]
+        };
+
+        // Initialisering når siden lastes
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeParticles();
+            setupDragAndDrop();
+            initializeChatbot();
+        });
+
+        // Initialiserer particles.js bakgrunn
+        function initializeParticles() {
+            particlesJS("particles-js", {
+                particles: {
+                    number: {
+                        value: 80,
+                        density: {
+                            enable: true,
+                            value_area: 800
+                        }
+                    },
+                    color: {
+                        value: "#ffffff"
+                    },
+                    opacity: {
+                        value: 0.5,
+                        random: false
+                    },
+                    size: {
+                        value: 3,
+                        random: true
+                    },
+                    line_linked: {
+                        enable: true,
+                        distance: 150,
+                        color: "#ffffff",
+                        opacity: 0.4,
+                        width: 1
+                    },
+                    move: {
+                        enable: true,
+                        speed: 2,
+                        direction: "none",
+                        random: false,
+                        straight: false,
+                        out_mode: "out",
+                        bounce: false
+                    }
+                },
+                interactivity: {
+                    detect_on: "canvas",
+                    events: {
+                        onhover: {
+                            enable: true,
+                            mode: "grab"
+                        },
+                        onclick: {
+                            enable: true,
+                            mode: "push"
+                        },
+                        resize: true
+                    }
+                }
+            });
+        }
+
+        // Setter opp drag-and-drop funksjonalitet
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('uploadArea');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight(e) {
+                dropZone.classList.add('drag-hover');
+            }
+
+            function unhighlight(e) {
+                dropZone.classList.remove('drag-hover');
+            }
+
+            dropZone.addEventListener('drop', handleDrop, false);
+        }
+
+        // Håndterer filopplasting
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        // Initialiserer chatbot
+        function initializeChatbot() {
+            const chatbot = document.getElementById('chatbot');
+            addChatMessage('AI', AI_RESPONSES.GREETING, true);
+        }
+
+        // Chat-funksjoner
+        function toggleChat() {
+            const chatbot = document.getElementById('chatbot');
+            if (chatbot.style.display === 'none') {
+                chatbot.style.display = 'block';
+                chatbot.classList.add('animate__animated', 'animate__fadeIn');
+            } else {
+                chatbot.classList.add('animate__animated', 'animate__fadeOut');
+                setTimeout(() => {
+                    chatbot.style.display = 'none';
+                    chatbot.classList.remove('animate__animated', 'animate__fadeOut');
+                }, 300);
+            }
+        }
+
+        // Sender chat-melding
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Legg til brukerens melding
+            addChatMessage('Du', message);
+            chatHistory.push({ role: 'user', message: message });
+            input.value = '';
+
+            // Analyser meldingen og velg passende svar-kategori
+            const messageType = analyzeMessage(message);
+            
+            // Simuler AI-tenking med typing-indikator
+            showTypingIndicator();
+            
+            // Velg og send svar etter en kort forsinkelse
+            setTimeout(() => {
+                hideTypingIndicator();
+                const response = getAIResponse(messageType);
+                addChatMessage('AI', response);
+                chatHistory.push({ role: 'ai', message: response });
+            }, 1500);
+        }
+
+        // Analyserer meldingen for å velge svarkategori
+        function analyzeMessage(message) {
+            message = message.toLowerCase();
+            if (message.includes('økonomi') || message.includes('pris') || message.includes('inntekt')) {
+                return 'FINANCIAL';
+            } else if (message.includes('krav') || message.includes('regler') || message.includes('forskrift')) {
+                return 'TECHNICAL';
+            } else {
+                return 'ANALYSIS';
+            }
+        }
+
+        // Henter passende AI-svar
+        function getAIResponse(type) {
+            const responses = AI_RESPONSES[type] || AI_RESPONSES.ANALYSIS;
+            return responses[Math.floor(Math.random() * responses.length)];
+        }
+
+        // Legger til chat-melding med animasjon
+        function addChatMessage(sender, message, isInitial = false) {
+            const messages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender.toLowerCase()} animate__animated animate__fadeInUp`;
+            messageDiv.innerHTML = `${message}`;
+            
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+
+            if (!isInitial) {
+                playMessageSound(sender === 'AI');
+            }
+        }
+
+        // Viser typing-indikator
+        function showTypingIndicator() {
+            const messages = document.getElementById('chatMessages');
+            const indicator = document.createElement('div');
+            indicator.className = 'typing-indicator';
+            indicator.innerHTML = '<span></span><span></span><span></span>';
+            messages.appendChild(indicator);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // Skjuler typing-indikator
+        function hideTypingIndicator() {
+            const indicator = document.querySelector('.typing-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        // Spiller av lyd for meldinger
+        function playMessageSound(isAI) {
+            const audio = new Audio(isAI ? 'message_received.mp3' : 'message_sent.mp3');
+            audio.volume = 0.2;
+            audio.play().catch(() => {}); // Ignorerer feil hvis lyd er deaktivert
+        }
+
+        // Start analyse
+
+
+        // Simulerer analysefremdrift
+        function simulateProgress() {
+            const analyzeSteps = [
+                { progress: 15, status: 'Scanner plantegning...', duration: 800 },
+                { progress: 30, status: 'Analyserer romfordeling...', duration: 1000 },
+                { progress: 45, status: 'Identifiserer utleiemuligheter...', duration: 1200 },
+                { progress: 60, status: 'Beregner økonomisk potensial...', duration: 1000 },
+                { progress: 75, status: 'Sjekker reguleringsplan...', duration: 900 },
+                { progress: 90, status: 'Genererer rapport...', duration: 800 },
+                { progress: 100, status: 'Analyse fullført!', duration: 500 }
+            ];
+            
+            let currentStep = 0;
+            const progressBar = document.getElementById('analysisProgress');
+            const statusElement = document.querySelector('.progress-status');
+            
+            function updateProgress() {
+                const step = analyzeSteps[currentStep];
+                if (!step) return;
+                
+                // Animate progress bar
+                progressBar.style.transition = `width ${step.duration}ms ease-in-out`;
+                progressBar.style.width = step.progress + '%';
+                progressBar.textContent = step.progress + '%';
+                
+                // Add analysis message with animation
+                addAnalysisMessage(step.status, true);
+                
+                currentStep++;
+                
+                if (currentStep < analyzeSteps.length) {
+                    setTimeout(updateProgress, step.duration + 200);
+                } else {
+                    setTimeout(completeAnalysis, step.duration + 500);
+                }
+            }
+            
+            // Start analysis animation
+            updateProgress();
+        }
+
+        // Legger til analysemeldinger
+        function addAnalysisMessage(message, isStep = false) {
+            const container = document.createElement('div');
+            container.className = 'alert alert-info animate__animated animate__fadeIn';
+            
+            // Legg til ikon og styling basert på meldingstype
+            if (isStep) {
+                container.classList.add('analysis-step');
+                container.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <div class="analysis-step-icon me-3">
+                            <i class="fas fa-cog fa-spin"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">${message}</h6>
+                            <small class="text-muted">Behandler...</small>
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <i class="fas fa-info-circle me-2"></i>${message}
+                `;
+            }
+            
+            document.getElementById('resultContainer').insertBefore(
+                container, 
+                document.getElementById('resultContainer').firstChild
+            );
+
+            // Animasjonseffekter
+            container.style.transform = 'translateX(-20px)';
+            container.style.opacity = '0';
+            
+            requestAnimationFrame(() => {
+                container.style.transition = 'all 0.5s ease-out';
+                container.style.transform = 'translateX(0)';
+                container.style.opacity = '1';
+            });
+
+            // Fjern eldre meldinger
+            const messages = document.getElementsByClassName('alert');
+            if (messages.length > 5) {
+                setTimeout(() => {
+                    messages[messages.length - 1].classList.add('animate__fadeOut');
+                    setTimeout(() => {
+                        messages[messages.length - 1].remove();
+                    }, 500);
+                }, 300);
+            }
+        }
+
+        // Fullfører analysen
+        function completeAnalysis() {
+            // Generer 3D plantegninger
+            generateFloorplans();
+            
+            // Vis resultatseksjoner med animasjoner
+            document.querySelectorAll('.result-section').forEach((section, index) => {
+                setTimeout(() => {
+                    section.classList.add('animate__animated', 'animate__fadeInUp');
+                    section.style.opacity = '1';
+                }, index * 300);
+            });
+
+            // Start chat-dialog
+            setTimeout(() => {
+                toggleChat();
+                addChatMessage('AI', 'Jeg har fullført analysen! Vil du at jeg skal gå gjennom resultatene med deg?');
+            }, 1500);
+        }
+
+        // Genererer plantegninger
+        function generateFloorplans() {
+            // Sett plantegninger med overgangseffekt
+            const originalPlan = document.getElementById('originalPlan');
+            const optimizedPlan = document.getElementById('optimizedPlan');
+
+            originalPlan.style.opacity = '0';
+            optimizedPlan.style.opacity = '0';
+
+            setTimeout(() => {
+                originalPlan.src = 'modern_3d_blueprint.jpg';
+                originalPlan.style.opacity = '1';
+            }, 500);
+
+            setTimeout(() => {
+                optimizedPlan.src = 'ai_analysis_demo.jpg';
+                optimizedPlan.style.opacity = '1';
+            }, 1000);
+        }
+
+        // Laster ned rapport
+        function downloadReport() {
+            // Generer rapport innhold
+            const reportContent = generateReportContent();
+            
+            // Opprett og last ned fil
+            const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'EiendomsAI_Analyse_Rapport.txt';
+            
+            // Legg til nedlastingsanimasjon
+            const downloadButton = event.target;
+            downloadButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Genererer rapport...';
+            
+            setTimeout(() => {
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                downloadButton.innerHTML = '<i class="fas fa-check me-2"></i>Rapport lastet ned';
+                setTimeout(() => {
+                    downloadButton.innerHTML = '<i class="fas fa-download me-2"></i>Last ned fullstendig rapport';
+                }, 2000);
+            }, 1500);
+        }
+
+        // Genererer rapportinnhold
+        function generateReportContent() {
+            const date = new Date().toLocaleDateString('no-NO', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            return `
+EiendomsAI - Analyserapport
+===========================
+Generert: ${date}
+
+SAMMENDRAG
+---------
+Din eiendom har blitt analysert av vår AI, og vi har identifisert betydelige muligheter for verdiskapning gjennom utleie.
+
+UTLEIEMULIGHETER
+--------------
+1. Hovedutleieenhet (65m²)
+   - 2 soverom
+   - Åpen kjøkken/stue-løsning
+   - Eget bad
+   - Egen inngang
+   - Estimert leieinntekt: 12,000 kr/mnd
+
+2. Sekundær utleieenhet (35m²)
+   - 1 soverom
+   - Kombinert stue/kjøkken
+   - Eget bad
+   - Estimert leieinntekt: 8,000 kr/mnd
+
+TEKNISKE KRAV
+------------
+1. Brannsikring ✓
+   - Installasjon av brannvarslere
+   - Rømningsveier etablert
+   - Brannslukkingsutstyr plassert
+
+2. Ventilasjon ✓
+   - Mekanisk ventilasjon installeres
+   - Avtrekk på bad og kjøkken
+   - Luftskifte oppfyller krav
+
+3. Takhøyde ⚠
+   - Kjeller: Må økes til minimum 2.2m
+   - Hovedetasje: Godkjent (2.4m)
+
+4. Lydkrav ✓
+   - Etasjeskiller forsterkes
+   - Lydisolering i vegger
+   - Støyreduserende tiltak
+
+ØKONOMISK ANALYSE
+---------------
+Totalt potensial: 20,000 kr/mnd
+Oppgraderingskostnader: 150,000 - 200,000 kr
+Estimert ROI: 12-15 måneder
+
+NESTE STEG
+---------
+1. Søk om bruksendring
+2. Send nabovarsel
+3. Oppgrader ventilasjonssystem
+4. Installer brannsikring
+5. Utbedre takhøyde i kjeller
+
+For mer informasjon eller assistanse, kontakt vår AI-assistent gjennom chat-funksjonen.
+
+Generert av EiendomsAI
+Versjon 2.0
+            `;
+        }
+
+
+
+        // Start analyse - den moderne og omfattende versjonen
+        function startAnalysis(file, url = null) {
+            // Vis laste-indikator
+            showLoadingState();
+
+            // Simuler analyse (i en ekte implementasjon ville dette vært et API-kall)
+            setTimeout(() => {
+                // Generer resultater basert på fil eller URL
+                const results = generateAnalysisResults(file, url);
+                updateUIWithResults(results);
+                hideLoadingState();
+
+            // Vis progress bar
+            const progressBar = document.createElement('div');
+            progressBar.className = 'progress mb-3';
+            progressBar.innerHTML = `
+                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                     role="progressbar" 
+                     style="width: 0%" 
+                     id="analysisProgress">
+                    0%
+                </div>
+            `;
+            document.getElementById('resultContainer').prepend(progressBar);
+
+            // Simuler analyse-progress
+            let progress = 0;
+            const progressElement = progressBar.querySelector('.progress-bar');
+            const progressInterval = setInterval(() => {
+                progress += 2;
+                progressElement.style.width = progress + '%';
+                progressElement.textContent = progress + '%';
+
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                    // Fjern progress bar
+                    progressBar.remove();
+                    // Vis resultater
+                    showResults();
+                    // Generer plantegninger
+                    generateFloorplans();
+                    // Last ned rapport automatisk
+                    downloadReport();
+                }
+            }, 100);
+        }
+
+        // Vis resultater
+        function showResults() {
+            // Sett plantegninger
+            document.getElementById('originalPlan').src = 'https://via.placeholder.com/500x300?text=Original+Plantegning';
+            document.getElementById('optimizedPlan').src = 'https://via.placeholder.com/500x300?text=Optimalisert+Plantegning';
+
+            // Vis utleieanalyse
+            document.getElementById('rentalAnalysis').innerHTML = `
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5>Hovedutleieenhet (65m²)</h5>
+                        <ul>
+                            <li>2 soverom</li>
+                            <li>1 bad</li>
+                            <li>Åpen kjøkken/stue-løsning</li>
+                            <li>Estimert leieinntekt: 12,000 kr/mnd</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <h5>Sekundær utleieenhet (35m²)</h5>
+                        <ul>
+                            <li>1 soverom</li>
+                            <li>1 bad</li>
+                            <li>Kombinert stue/kjøkken</li>
+                            <li>Estimert leieinntekt: 8,000 kr/mnd</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+
+            // Vis tekniske krav
+            document.getElementById('technicalRequirements').innerHTML = `
+                <div class="list-group">
+                    <div class="list-group-item">
+                        <h5 class="mb-1">Brannsikring ✅</h5>
+                        <p class="mb-1">Installasjon av brannvarslere og rømningsveier</p>
+                    </div>
+                    <div class="list-group-item">
+                        <h5 class="mb-1">Ventilasjon ✅</h5>
+                        <p class="mb-1">Oppgradering av ventilasjonsanlegg</p>
+                    </div>
+                    <div class="list-group-item">
+                        <h5 class="mb-1">Takhøyde ⚠️</h5>
+                        <p class="mb-1">Må økes i deler av kjeller</p>
+                    </div>
+                    <div class="list-group-item">
+                        <h5 class="mb-1">Lydkrav ✅</h5>
+                        <p class="mb-1">Installasjon av lydisolering</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Last ned rapport
+        function downloadReport() {
+            // Opprett rapport innhold
+            const reportContent = `
+EiendomsAI - Analyserapport
+===========================
+
+EIENDOMSANALYSE
+--------------
+Dato: ${new Date().toLocaleDateString()}
+Analysetype: Utleiemuligheter
+
+UTLEIEENHETER
+------------
+1. Hovedutleieenhet:
+   - Areal: 65m²
+   - Planløsning: 2 soverom, 1 bad, åpen kjøkken/stue
+   - Estimert leieinntekt: 12,000 kr/mnd
+   - Status: Klar for utleie etter mindre tilpasninger
+
+2. Sekundær utleieenhet:
+   - Areal: 35m²
+   - Planløsning: 1 soverom, 1 bad, kombinert stue/kjøkken
+   - Estimert leieinntekt: 8,000 kr/mnd
+   - Status: Krever enkelte tilpasninger
+
+TEKNISKE KRAV
+------------
+1. Brannsikring:
+   ✓ Brannvarslere: Installeres i alle rom
+   ✓ Rømningsveier: Godkjent
+   ✓ Brannslukkingsutstyr: Må installeres
+
+2. Ventilasjon:
+   ✓ Luftskifte: Oppfyller krav
+   ✓ Avtrekk bad/kjøkken: Må oppgraderes
+   ! Mekanisk ventilasjon: Anbefales installert
+
+3. Takhøyde:
+   ! Kjeller: Må økes til minimum 2.2m
+   ✓ Hovedetasje: Godkjent (2.4m)
+
+4. Lydkrav:
+   ✓ Etasjeskiller: Må forbedres
+   ✓ Vegger: Godkjent
+   - Anbefalt: Ekstra isolasjon i etasjeskiller
+
+ØKONOMISK ANALYSE
+---------------
+Totalt potensial: 20,000 kr/mnd
+Estimerte oppgraderingskostnader: 150,000 - 200,000 kr
+Estimert ROI: 12-15 måneder
+
+ANBEFALTE TILTAK
+--------------
+1. Oppgradering av ventilasjonssystem
+2. Installasjon av brannvarslingsanlegg
+3. Forbedring av lydisolasjon
+4. Økning av takhøyde i kjeller
+5. Etablering av separate innganger
+
+SØKNADER OG TILLATELSER
+---------------------
+- Søknad om bruksendring påkrevd
+- Nabovarsel må sendes
+- Byggesøknad for takhøydejustering påkrevd
+
+Generert av EiendomsAI
+Versjon 1.0
+`;
+
+            // Opprett blob og last ned
+            const blob = new Blob([reportContent], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'EiendomsAI_Rapport.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            // Generer og vis plantegninger
+            generateFloorplans();
+        }
+
+        // Generer plantegninger
+        function generateFloorplans() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 500;
+            canvas.height = 300;
+
+            // Funksjon for å tegne enkel plantegning
+            function drawFloorplan(isOptimized) {
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Tegn ytre vegger
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(50, 50, 400, 200);
+
+                if (isOptimized) {
+                    // Tegn optimalisert layout
+                    // Hovedutleieenhet
+                    ctx.strokeRect(50, 50, 250, 200);
+                    ctx.strokeRect(50, 150, 250, 2);
+                    ctx.strokeRect(150, 50, 2, 100);
+                    
+                    // Sekundær utleieenhet
+                    ctx.strokeRect(300, 50, 150, 200);
+                    ctx.strokeRect(300, 150, 150, 2);
+                    
+                    // Legg til tekst
+                    ctx.fillStyle = '#000';
+                    ctx.font = '12px Arial';
+                    ctx.fillText('Hovedutleieenhet', 100, 100);
+                    ctx.fillText('65m²', 100, 120);
+                    ctx.fillText('Sekundær', 320, 100);
+                    ctx.fillText('35m²', 320, 120);
+                } else {
+                    // Tegn original layout
+                    ctx.strokeRect(50, 150, 400, 2);
+                    ctx.strokeRect(250, 50, 2, 200);
+                    
+                    // Legg til tekst
+                    ctx.fillStyle = '#000';
+                    ctx.font = '12px Arial';
+                    ctx.fillText('Original planløsning', 200, 180);
+                }
+            }
+
+            // Generer original plantegning
+            drawFloorplan(false);
+            document.getElementById('originalPlan').src = canvas.toDataURL();
+
+            // Generer optimalisert plantegning
+            drawFloorplan(true);
+            document.getElementById('optimizedPlan').src = canvas.toDataURL();
+        }
+
+        // Filopplasting
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#00ff87';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '';
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleFile(file);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        function handleFile(file) {
+            uploadArea.innerHTML = `<p>Fil valgt: ${file.name}</p>`;
+        }
+    </script>
+</body>
+</html>

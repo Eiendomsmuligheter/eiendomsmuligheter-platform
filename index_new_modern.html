@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EiendomsAI | Skapende Inntektsmuligheter</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <style>
+        :root {
+            --primary-color: #2D46B9;
+            --secondary-color: #0ED3CF;
+            --accent-color: #F9A826;
+            --dark-bg: #111827;
+            --light-bg: #F3F4F6;
+            --text-primary: #ffffff;
+            --text-secondary: #9CA3AF;
+            --success-color: #10B981;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .navbar {
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-section {
+            min-height: 80vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(45, 70, 185, 0.1) 0%, rgba(14, 211, 207, 0.1) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 2rem;
+            transition: transform 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .ai-badge {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+
+        .cta-button {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: transform 0.3s ease;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.05);
+        }
+
+        .stats-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 0.5rem;
+        }
+
+        #particles-js {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .content-wrapper {
+            position: relative;
+            z-index: 2;
+        }
+
+        .floating-chat {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--primary-color);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .floating-chat:hover {
+            transform: scale(1.1);
+        }
+
+        .income-chart {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .testimonial-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 2rem;
+            margin: 1rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .ai-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 4rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">EiendomsAI</a>
+            <button class="btn btn-outline-light">Start Analyse</button>
+        </div>
+    </nav>
+
+    <section class="hero-section">
+        <div class="container content-wrapper">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <span class="ai-badge">AI-Drevet Plattform</span>
+                    <h1 class="display-4 fw-bold mb-4">Lås opp din eiendoms fulle potensial med AI</h1>
+                    <p class="lead mb-4">Oppdag skjulte inntektsmuligheter i din bolig med vår banebrytende AI-teknologi. Få detaljerte analyser, økonomiske prognoser og automatiserte løsninger.</p>
+                    <button class="cta-button btn btn-primary btn-lg">Start din analyse nå</button>
+                </div>
+                <div class="col-lg-6">
+                    <lottie-player src="https://assets2.lottiefiles.com/packages/lf20_V9t630.json" background="transparent" speed="1" loop autoplay></lottie-player>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-5">
+        <div class="container content-wrapper">
+            <div class="row mb-5">
+                <div class="col-md-4">
+                    <div class="stats-card">
+                        <div class="stats-number">45%</div>
+                        <p>Gjennomsnittlig økning i leieinntekter</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stats-card">
+                        <div class="stats-number">2500+</div>
+                        <p>Analyserte eiendommer</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stats-card">
+                        <div class="stats-number">98%</div>
+                        <p>Kundetilfredshet</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ai-features">
+                <div class="feature-card">
+                    <h3>AI-Drevet Analyse</h3>
+                    <p>Vår kunstige intelligens analyserer din eiendom og identifiserer optimale utleiemuligheter basert på lokale forskrifter og markedsdata.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Automatisert Dokumentasjon</h3>
+                    <p>Få automatisk genererte rapporter, søknader og dokumentasjon klar for kommunal behandling.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Økonomisk Optimalisering</h3>
+                    <p>Maksimer din ROI med detaljerte økonomiske analyser og inntektsprognoser.</p>
+                </div>
+            </div>
+
+            <div class="income-chart">
+                <h3 class="mb-4">Potensiell Inntektsøkning</h3>
+                <canvas id="incomeChart"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <div class="floating-chat" onclick="toggleChat()">
+        <i class="fas fa-comments text-white fs-4"></i>
+    </div>
+
+    <script>
+        // Particles.js Config
+        particlesJS("particles-js", {
+            "particles": {
+                "number": {
+                    "value": 80,
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#ffffff"
+                },
+                "opacity": {
+                    "value": 0.5,
+                    "random": false
+                },
+                "size": {
+                    "value": 3,
+                    "random": true
+                },
+                "line_linked": {
+                    "enable": true,
+                    "distance": 150,
+                    "color": "#ffffff",
+                    "opacity": 0.4,
+                    "width": 1
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 2,
+                    "direction": "none",
+                    "random": false,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false
+                }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": {
+                        "enable": true,
+                        "mode": "grab"
+                    },
+                    "onclick": {
+                        "enable": true,
+                        "mode": "push"
+                    },
+                    "resize": true
+                }
+            }
+        });
+
+        // Chart.js
+        const ctx = document.getElementById('incomeChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['År 1', 'År 2', 'År 3', 'År 4', 'År 5'],
+                datasets: [{
+                    label: 'Potensiell Inntekt',
+                    data: [150000, 180000, 220000, 270000, 330000],
+                    borderColor: '#0ED3CF',
+                    tension: 0.4,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#9CA3AF'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#9CA3AF'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#9CA3AF'
+                        }
+                    }
+                }
+            }
+        });
+
+        function toggleChat() {
+            // Implementer chat-funksjonalitet her
+            console.log('Chat toggled');
+        }
+    </script>
+</body>
+</html>

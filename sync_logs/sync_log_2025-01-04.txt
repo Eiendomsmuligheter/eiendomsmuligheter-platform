@@ -1,0 +1,7 @@
+Sync started at  3:06:31,01 on 04.01.2025 
+Target: C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter 
+GitHub Repository: https://github.com/Eiendomsmuligheter/eiendomsmuligheter-platform.git 
+ 
+[ 3:06:31,09] Starter GitHub sync 
+Cloning into 'C:\Users\Ahmad\AppData\Local\Temp\eiendomsmuligheter_temp'...
+[ 3:06:53,09] Sync fullfort. Totalt 90 filer behandlet 

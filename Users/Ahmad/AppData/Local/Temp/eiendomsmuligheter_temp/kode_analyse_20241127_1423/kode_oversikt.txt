@@ -1,0 +1,67 @@
+================================================ 
+             PROSJEKT KODE ANALYSE 
+================================================ 
+Generert: 27.11.2024 14:23:58,47 
+Prosjektmappe: C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1 
+ 
+Mapper funnet: 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\.github 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\backend 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\components 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\infrastructure 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\kode_analyse_20241127_1416 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\kode_analyse_20241127_1423 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\launch 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\monitoring 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\nginx 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\pages 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\public 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\scripts 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\setup 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\styles 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\.github\workflows 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\backend\config 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\backend\controllers 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\backend\data 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\backend\middleware 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\backend\models 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\backend\routes 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\backend\services 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\backend\data\standards 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\.next 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\components 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\contexts 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\images 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\pages 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\public 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\styles 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\.next\cache 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\.next\cache\swc 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\.next\cache\webpack 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\.next\cache\swc\plugins 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\.next\cache\swc\plugins\v3 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\.next\cache\webpack\client-development 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\.next\cache\webpack\client-development-fallback 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\.next\cache\webpack\server-development 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\components\AnalysisResult 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\components\Dashboard 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\components\FloorPlanVisualizer 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\components\PropertyModeler 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\components\PropertyVisualizer 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\components\Report 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\frontend\public\images 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\infrastructure\terraform 
+C:\Users\Ahmad\OneDrive\plattform\eiendomsmuligheter1\nginx\conf.d 
+ 
+ 
+================================================ 
+Fil:  
+Sti:  
+Type:  
+Størrelse:  bytes 
+Sist endret:  
+================================================ 
+Kategori: Ukjent 
+ 
+ 

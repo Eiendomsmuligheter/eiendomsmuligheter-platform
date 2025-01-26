@@ -1,0 +1,117 @@
+# Grunnleggende verktøy
+streamlit>=1.28.0
+requests>=2.31.0
+beautifulsoup4>=4.12.2
+pandas>=2.1.3
+numpy>=1.24.3
+plotly>=5.18.0
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+tqdm>=4.66.1
+
+# AI og maskinlæring
+tensorflow>=2.14.0
+transformers>=4.35.2
+scikit-learn>=1.3.2
+opencv-python-headless>=4.8.1.78
+sentence-transformers>=2.2.2
+
+# 3D visualisering og bildbehandling
+open3d>=0.17.0
+matplotlib>=3.8.2
+plotly-express>=0.4.1
+pillow>=10.1.0
+
+# Databehandling og analyse
+scipy>=1.11.3
+networkx>=3.2.1
+statsmodels>=0.14.0
+pymc3>=4.0.0
+prophet>=1.1.5
+
+# Webverktøy og API
+aiohttp>=3.9.1
+fastapi>=0.104.1
+uvicorn>=0.24.0
+websockets>=12.0
+httpx>=0.25.2
+
+# Dokumenthåndtering
+python-docx>=1.0.1
+PyPDF2>=3.0.1
+reportlab>=4.0.7
+pypdf>=3.17.1
+docxtpl>=0.16.7
+pdfminer.six>=20221105
+pdfkit>=1.0.0
+wkhtmltopdf-pack>=0.12.6
+python-docx-template>=0.3.3
+mammoth>=1.6.0
+
+# Databaseintegrasjon
+sqlalchemy>=2.0.23
+psycopg2-binary>=2.9.9
+redis>=5.0.1
+motor>=3.3.2
+
+# Testing og logging
+pytest>=7.4.3
+pytest-asyncio>=0.21.1
+pytest-cov>=4.1.0
+logging-utils>=0.0.13
+loguru>=0.7.2
+
+# Sikkerhet og autentisering
+cryptography>=41.0.5
+python-jose>=3.3.0
+passlib>=1.7.4
+bcrypt>=4.0.1
+python-multipart>=0.0.6
+
+# Systemverktøy og optimalisering
+numba>=0.58.1
+dask>=2023.11.0
+joblib>=1.3.2
+concurrent-log-handler>=0.9.24
+
+# Kommunale integrasjoner
+zeep>=4.2.1  # SOAP-klient for kommunale systemer
+pyproj>=3.6.1  # Koordinattransformasjoner
+geopandas>=0.14.1  # Geografisk databehandling
+
+# GUI og visualisering
+streamlit-option-menu>=0.3.6
+streamlit-extras>=0.3.5
+streamlit-folium>=0.15.0
+plotly-resampler>=0.9.1
+kaleido>=0.2.1  # For statiske plotly-eksport
+
+# Utvikling og debugging
+black>=23.11.0
+flake8>=6.1.0
+mypy>=1.7.1
+ipython>=8.18.1
+jupyter>=1.0.0
+rich>=13.7.0
+
+# Deployment og monitorering
+gunicorn>=21.2.0
+prometheus-client>=0.19.0
+sentry-sdk>=1.35.0
+supervisor>=4.2.5
+
+# Cache og ytelse
+cachetools>=5.3.2
+fastapi-cache2>=0.2.1
+python-memcached>=1.59
+
+# Språk og tekstbehandling
+spacy>=3.7.2
+nltk>=3.8.1
+markdown>=3.5.1
+python-docx>=1.0.1
+
+# Versjonskontroll og konfigurasjon
+GitPython>=3.1.40
+configparser>=6.0.0
+dynaconf>=3.2.4

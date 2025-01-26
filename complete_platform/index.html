@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EiendomsAI | Avansert Eiendomsanalyse Platform</title>
+    
+    <!-- Core Dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
+    
+    <!-- 3D Rendering Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babylonjs/core@6.0.0/babylon.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babylonjs/loaders@6.0.0/babylonjs.loaders.min.js"></script>
+    
+    <!-- Data Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/3d-viewer.css">
+    <link rel="stylesheet" href="css/analysis-panel.css">
+    
+    <!-- Progressive Web App Support -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2D46B9">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-glass fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-building-columns"></i> EiendomsAI
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#analyse">Analyse</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#3d-viewer">3D Visning</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#regulatory">Regulering</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#reports">Rapporter</a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <button class="btn btn-outline-light me-2" type="button" id="saveProject">
+                        <i class="fas fa-save"></i> Lagre Prosjekt
+                    </button>
+                    <button class="btn btn-primary" type="button" id="startAnalysis">
+                        <i class="fas fa-play"></i> Start Analyse
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Property Input Section -->
+        <section id="property-input" class="section-glass">
+            <div class="container">
+                <h2 class="section-title">Eiendomsanalyse</h2>
+                <div class="input-methods">
+                    <!-- Address Input -->
+                    <div class="input-method glass-card">
+                        <h3><i class="fas fa-map-marker-alt"></i> Adresse-basert</h3>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="addressInput" 
+                                   placeholder="Skriv inn adressen...">
+                            <button class="btn btn-primary" id="searchAddress">
+                                <i class="fas fa-search"></i> Søk
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Floorplan Upload -->
+                    <div class="input-method glass-card">
+                        <h3><i class="fas fa-upload"></i> Last opp plantegning</h3>
+                        <div class="upload-area" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Dra og slipp plantegning her eller klikk for å velge fil</p>
+                            <input type="file" id="floorplanUpload" accept="image/*,.pdf" hidden>
+                        </div>
+                    </div>
+
+                    <!-- URL Input -->
+                    <div class="input-method glass-card">
+                        <h3><i class="fas fa-link"></i> URL-analyse</h3>
+                        <div class="input-group">
+                            <input type="url" class="form-control" id="urlInput" 
+                                   placeholder="Lim inn URL til eiendomsannonse...">
+                            <button class="btn btn-primary" id="analyzeUrl">
+                                <i class="fas fa-analytics"></i> Analyser
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3D Visualization Section -->
+        <section id="3d-viewer" class="section-dark">
+            <div class="container-fluid">
+                <div class="row">
+                    <!-- 3D Control Panel -->
+                    <div class="col-md-3">
+                        <div class="control-panel glass-card">
+                            <h3>3D Kontroller</h3>
+                            <!-- Floor Controls -->
+                            <div class="floor-controls">
+                                <h4>Etasjer</h4>
+                                <div class="btn-group-vertical w-100" id="floorButtons">
+                                    <button class="btn btn-outline-light" data-floor="roof">Tak</button>
+                                    <button class="btn btn-outline-light" data-floor="2">2. Etasje</button>
+                                    <button class="btn btn-outline-light active" data-floor="1">1. Etasje</button>
+                                    <button class="btn btn-outline-light" data-floor="basement">Kjeller</button>
+                                </div>
+                            </div>
+                            
+                            <!-- View Controls -->
+                            <div class="view-controls mt-4">
+                                <h4>Visninger</h4>
+                                <div class="btn-group w-100" id="viewButtons">
+                                    <button class="btn btn-outline-light active" data-view="3d">3D</button>
+                                    <button class="btn btn-outline-light" data-view="top">Ovenfra</button>
+                                    <button class="btn btn-outline-light" data-view="front">Fasade</button>
+                                </div>
+                            </div>
+
+                            <!-- Layer Controls -->
+                            <div class="layer-controls mt-4">
+                                <h4>Lag</h4>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="wallsLayer" checked>
+                                    <label class="form-check-label" for="wallsLayer">Vegger</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="furnitureLayer" checked>
+                                    <label class="form-check-label" for="furnitureLayer">Møbler</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="measurementsLayer" checked>
+                                    <label class="form-check-label" for="measurementsLayer">Målinger</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main 3D Viewer -->
+                    <div class="col-md-9">
+                        <div class="viewer-container glass-card">
+                            <div id="3d-container"></div>
+                            <div class="measurement-overlay" id="measurementInfo"></div>
+                            <div class="minimap" id="minimap"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Property Analysis Section -->
+        <section id="analysis" class="section-glass">
+            <div class="container">
+                <div class="row">
+                    <!-- Analysis Results -->
+                    <div class="col-md-8">
+                        <div class="analysis-card glass-card">
+                            <h3>Eiendomsanalyse</h3>
+                            <div class="analysis-results" id="analysisResults">
+                                <!-- Generated content will go here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Regulatory Information -->
+                    <div class="col-md-4">
+                        <div class="regulatory-card glass-card">
+                            <h3>Reguleringsinfo</h3>
+                            <div class="regulatory-info" id="regulatoryInfo">
+                                <!-- Generated content will go here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Situational Plan Section -->
+        <section id="situation-plan" class="section-dark">
+            <div class="container">
+                <h2>Situasjonsplan</h2>
+                <div class="situation-viewer glass-card">
+                    <div id="situation-container"></div>
+                    <div class="situation-controls">
+                        <div class="btn-group">
+                            <button class="btn btn-outline-light" data-layer="boundaries">Tomtegrenser</button>
+                            <button class="btn btn-outline-light" data-layer="parking">Parkering</button>
+                            <button class="btn btn-outline-light" data-layer="vegetation">Vegetasjon</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- AI Assistant Chat -->
+    <div id="ai-assistant" class="ai-chat-widget">
+        <div class="chat-header">
+            <h4><i class="fas fa-robot"></i> AI Assistent</h4>
+            <button class="btn btn-minimize" id="minimizeChat">
+                <i class="fas fa-minus"></i>
+            </button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- Chat messages will be inserted here -->
+        </div>
+        <div class="chat-input">
+            <input type="text" placeholder="Still et spørsmål..." id="chatInput">
+            <button class="btn btn-send" id="sendMessage">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loader">
+            <div class="spinner"></div>
+            <p class="loading-text">Analyserer eiendom...</p>
+        </div>
+    </div>
+
+    <!-- Custom Scripts -->
+    <script src="js/core/initializer.js"></script>
+    <script src="js/core/api-handler.js"></script>
+    <script src="js/visualization/3d-viewer.js"></script>
+    <script src="js/visualization/floor-manager.js"></script>
+    <script src="js/visualization/situation-plan.js"></script>
+    <script src="js/analysis/property-analyzer.js"></script>
+    <script src="js/analysis/regulatory-checker.js"></script>
+    <script src="js/ui/chat-assistant.js"></script>
+    <script src="js/ui/interface-manager.js"></script>
+</body>
+</html>

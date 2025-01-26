@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EiendomsAI | Fremtidens Eiendomsanalyse</title>
+    
+    <!-- External CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.5.95/css/materialdesignicons.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/main.css">
+    
+    <!-- External JS Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babylonjs/core@5.0.0/babylon.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babylonjs/loaders@5.0.0/babylonjs.loaders.min.js"></script>
+    
+    <!-- Application Modules -->
+    <script src="js/addressRecognition.js"></script>
+    <script src="js/reportGenerator.js"></script>
+    <script src="components/PropertyAnalyzer.js"></script>
+    <script src="components/RegulatoryChecker.js"></script>
+    <script src="components/FormGenerator.js"></script>
+    <script src="components/3DVisualizer.js"></script>
+    <script src="js/app.js"></script>
+</head>
+<body>
+    <!-- Gradient Overlay -->
+    <div class="gradient-overlay"></div>
+    
+    <!-- Main Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="mdi mdi-home-analytics me-2"></i>EiendomsAI
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#analyze">Analyser</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#regulations">Regelverk</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#visualization">3D Visning</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h1 class="display-4 fw-bold mb-4">Optimaliser din eiendom med AI</h1>
+                    <p class="lead mb-4">Automatisk analyse av utleiemuligheter med full dokumentasjon av alle lover og regler.</p>
+                    <div class="search-container glass-effect p-3">
+                        <div class="mb-3">
+                            <label for="addressSearch" class="form-label">Søk etter din adresse</label>
+                            <input type="text" class="form-control" id="addressSearch" 
+                                   placeholder="Skriv inn adresse...">
+                            <div id="addressSuggestions" class="mt-2"></div>
+                        </div>
+                        <button class="btn btn-primary w-100" id="startAnalysis">
+                            Start Analyse
+                        </button>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="visualization-preview glass-effect">
+                        <!-- 3D Preview will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Analysis Process Section -->
+    <section id="analyze" class="py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4">
+                    <!-- Property Information -->
+                    <div class="glass-effect mb-4">
+                        <h3>Eiendomsinformasjon</h3>
+                        <div id="propertyInfo"></div>
+                    </div>
+                    
+                    <!-- Municipality Rules -->
+                    <div class="glass-effect">
+                        <h3>Kommunale Regler</h3>
+                        <div id="municipalityRules"></div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-8">
+                    <!-- 3D Visualization -->
+                    <div class="visualization-container mb-4">
+                        <div id="3dViewer"></div>
+                        <div class="visualization-controls">
+                            <button class="btn btn-outline-light" onclick="rotateModel('left')">
+                                <i class="fas fa-undo"></i>
+                            </button>
+                            <button class="btn btn-outline-light" onclick="rotateModel('right')">
+                                <i class="fas fa-redo"></i>
+                            </button>
+                            <button class="btn btn-outline-light" onclick="toggleFurniture()">
+                                <i class="fas fa-couch"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Analysis Results -->
+                    <div id="analysisResults"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Required Forms Section -->
+    <section id="forms" class="py-5">
+        <div class="container">
+            <h2 class="mb-4">Nødvendige Skjemaer</h2>
+            <div class="form-progress mb-4">
+                <!-- Progress steps will be added here -->
+            </div>
+            <div id="formContainer" class="glass-effect">
+                <!-- Form content will be added here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Cost Calculator -->
+    <section id="costs" class="py-5">
+        <div class="container">
+            <h2 class="mb-4">Kostnadsestimater</h2>
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="glass-effect">
+                        <h3>Nødvendige Tiltak</h3>
+                        <div id="requiredChanges"></div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="glass-effect">
+                        <h3>Kostnadssammendrag</h3>
+                        <div id="costSummary"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Report Generation -->
+    <section id="report" class="py-5">
+        <div class="container">
+            <div class="glass-effect">
+                <h2 class="mb-4">Fullstendig Rapport</h2>
+                <div class="row">
+                    <div class="col-md-4">
+                        <button class="btn btn-primary w-100 mb-3" onclick="downloadReport('pdf')">
+                            <i class="fas fa-file-pdf me-2"></i>Last ned PDF
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-primary w-100 mb-3" onclick="downloadReport('word')">
+                            <i class="fas fa-file-word me-2"></i>Last ned Word
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-primary w-100 mb-3" onclick="shareReport()">
+                            <i class="fas fa-share-alt me-2"></i>Del Rapport
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Chat Support -->
+    <div id="chatSupport" class="chat-widget">
+        <div class="chat-header">
+            <h5><i class="fas fa-comments me-2"></i>AI Assistent</h5>
+            <button class="btn btn-sm btn-light" onclick="toggleChat()">×</button>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input">
+            <input type="text" placeholder="Still et spørsmål..." id="chatInput"
+                   onkeypress="if(event.keyCode===13) sendMessage()">
+            <button onclick="sendMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p id="loadingMessage">Analyserer eiendom...</p>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer" class="alert-container"></div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Dokumenthåndtering
+python-docx>=1.0.1
+reportlab>=4.0.7
+pdfkit>=1.0.0
+
+# Grunnleggende verktøy
+pandas>=2.1.3
+numpy>=1.24.3
+python-dotenv>=1.0.0
+
+# Logging
+loguru>=0.7.2

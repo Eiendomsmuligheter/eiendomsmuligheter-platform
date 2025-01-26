@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EiendomsAI | Intelligente Boligløsninger</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://kit.fontawesome.com/your-code.js" crossorigin="anonymous"></script>
+    <style>
+        :root {
+            --primary-color: #2D46B9;
+            --secondary-color: #0ED3CF;
+            --accent-color: #F9A826;
+            --dark-bg: #111827;
+            --light-bg: #F3F4F6;
+            --text-primary: #ffffff;
+            --text-secondary: #9CA3AF;
+            --success-color: #10B981;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .navbar {
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(45, 70, 185, 0.1) 0%, rgba(14, 211, 207, 0.1) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-image {
+            width: 100%;
+            max-height: 400px;
+            object-fit: cover;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 2rem;
+            transition: transform 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .ai-badge {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+
+        .cta-button {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: transform 0.3s ease;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.05);
+        }
+
+        .floorplan-demo {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .floorplan-demo img {
+            width: 100%;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        .ai-analysis-section {
+            position: relative;
+            padding: 4rem 0;
+            background: linear-gradient(135deg, rgba(45, 70, 185, 0.05) 0%, rgba(14, 211, 207, 0.05) 100%);
+        }
+
+        .analysis-step {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .analysis-step i {
+            font-size: 2rem;
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+        }
+
+        .floating-chat {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--primary-color);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .floating-chat:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">EiendomsAI</a>
+            <button class="btn btn-outline-light">Start Analyse</button>
+        </div>
+    </nav>
+
+    <section class="hero-section">
+        <div class="container content-wrapper">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <span class="ai-badge">AI-Drevet Boligoptimalisering</span>
+                    <h1 class="display-4 fw-bold mb-4">Maksimer verdien av din bolig med AI-teknologi</h1>
+                    <p class="lead mb-4">Vår innovative AI-plattform hjelper deg med å identifisere og realisere skjulte inntektsmuligheter i din bolig. Fra plantegningsanalyse til automatiserte søknadsprosesser - vi gjør det enkelt å øke verdien av din eiendom.</p>
+                    <button class="cta-button btn btn-primary btn-lg">Start din gratis analyse</button>
+                </div>
+                <div class="col-lg-6">
+                    <img src="ai_header.jpg" alt="AI-drevet boliganalyse" class="hero-image animate__animated animate__fadeIn">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="ai-analysis-section">
+        <div class="container">
+            <h2 class="text-center mb-5">Slik fungerer vår AI-analyse</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="analysis-step">
+                        <i class="fas fa-upload"></i>
+                        <h3>Last opp plantegning</h3>
+                        <p>Last opp din eksisterende plantegning eller bilder av boligen din</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="analysis-step">
+                        <i class="fas fa-brain"></i>
+                        <h3>AI-Analyse</h3>
+                        <p>Vår AI analyserer mulighetene for utleie og optimalisering</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="analysis-step">
+                        <i class="fas fa-chart-line"></i>
+                        <h3>Få detaljert rapport</h3>
+                        <p>Motta en omfattende rapport med konkrete forslag og økonomiske beregninger</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-5">
+        <div class="container">
+            <div class="floorplan-demo">
+                <h2 class="text-center mb-4">Intelligent Plantegningsanalyse</h2>
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <img src="https://www.istockphoto.com/photo/modern-interior-design-floor-plan-3d-render-gm1210637949-350804238" alt="3D Plantegning" class="img-fluid">
+                    </div>
+                    <div class="col-md-6">
+                        <h3>AI-Optimaliserte Løsninger</h3>
+                        <ul class="list-unstyled">
+                            <li>✓ Identifiserer optimale utleieområder</li>
+                            <li>✓ Foreslår struktur- og layoutendringer</li>
+                            <li>✓ Beregner potensielle leieinntekter</li>
+                            <li>✓ Sjekker mot kommunale reguleringer</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="floating-chat" onclick="toggleChat()">
+        <i class="fas fa-comments text-white fs-4"></i>
+    </div>
+
+    <script>
+        // Particles.js Config
+        particlesJS("particles-js", {
+            "particles": {
+                "number": {
+                    "value": 80,
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#ffffff"
+                },
+                "opacity": {
+                    "value": 0.5,
+                    "random": false
+                },
+                "size": {
+                    "value": 3,
+                    "random": true
+                },
+                "line_linked": {
+                    "enable": true,
+                    "distance": 150,
+                    "color": "#ffffff",
+                    "opacity": 0.4,
+                    "width": 1
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 2,
+                    "direction": "none",
+                    "random": false,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false
+                }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": {
+                        "enable": true,
+                        "mode": "grab"
+                    },
+                    "onclick": {
+                        "enable": true,
+                        "mode": "push"
+                    },
+                    "resize": true
+                }
+            }
+        });
+
+        function toggleChat() {
+            // Implementer chat-funksjonalitet her
+            console.log('Chat toggled');
+        }
+    </script>
+</body>
+</html>
