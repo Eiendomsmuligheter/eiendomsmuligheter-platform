@@ -1,0 +1,64 @@
+project:
+  name: "Eiendomsmuligheter Platform"
+  version: "1.0.0"
+  description: "Verdens beste eiendomsanalyse plattform"
+
+services:
+  frontend:
+    port: 3000
+    api_url: "http://localhost:8000"
+    
+  backend:
+    port: 8000
+    database_url: "postgresql://localhost:5432/eiendomsmuligheter"
+    redis_url: "redis://localhost:6379"
+    
+  ai_services:
+    nvidia_omniverse:
+      enabled: true
+      api_key: "${NVIDIA_API_KEY}"
+    openai:
+      enabled: true
+      api_key: "${OPENAI_API_KEY}"
+      model: "gpt-4"
+
+integrations:
+  kommune_api:
+    base_url: "https://innsyn2020.drammen.kommune.no/api"
+    timeout: 30
+  
+  enova:
+    api_url: "https://api.enova.no"
+    support_calculator_enabled: true
+
+features:
+  property_analysis:
+    enabled: true
+    modules:
+      - floor_plan_analysis
+      - facade_analysis
+      - regulation_check
+      - energy_analysis
+      - development_potential
+  
+  visualization:
+    enabled: true
+    render_engine: "nvidia_rtx"
+    raytracing: true
+    3d_enabled: true
+
+security:
+  encryption:
+    algorithm: "AES-256-GCM"
+  authentication:
+    jwt_expiry: "24h"
+    refresh_token_expiry: "7d"
+
+performance:
+  caching:
+    enabled: true
+    ttl: 3600
+  auto_scaling:
+    enabled: true
+    min_instances: 2
+    max_instances: 10
