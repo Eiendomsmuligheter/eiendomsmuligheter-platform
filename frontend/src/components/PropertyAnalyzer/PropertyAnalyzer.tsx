@@ -1,5 +1,16 @@
 import React, { useState, useCallback } from 'react';
-import { Box, Typography, Paper, Stepper, Step, StepLabel, Button } from '@mui/material';
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  Stepper, 
+  Step, 
+  StepLabel, 
+  Button,
+  TextField,
+  InputAdornment
+} from '@mui/material';
+import LinkIcon from '@mui/icons-material/Link';
 import { styled } from '@mui/material/styles';
 import { useDropzone } from 'react-dropzone';
 import { AddressSearch, FileUpload, PropertyDetails, AnalysisResults } from './components';
@@ -28,11 +39,23 @@ const PropertyAnalyzer: React.FC = () => {
   const [propertyData, setPropertyData] = useState<PropertyData | null>(null);
   const { analyzeProperty, loading, error } = usePropertyAnalysis();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    // Håndter filopplasting
-    const file = acceptedFiles[0];
-    // TODO: Implementer filopplasting
-  }, []);
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    try {
+      const file = acceptedFiles[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const result = await analyzeProperty({
+        type: 'file',
+        data: formData
+      });
+      
+      setPropertyData(result);
+      nextStep();
+    } catch (error) {
+      console.error('Feil ved filopplasting:', error);
+    }
+  }, [analyzeProperty, nextStep]);
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
@@ -111,8 +134,23 @@ const PropertyAnalyzer: React.FC = () => {
               <FileUpload {...getRootProps()} inputProps={getInputProps()} />
             )}
             {analysisMethod === 'link' && (
-              <Box>
-                {/* TODO: Implementer link-input komponent */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Typography variant="body1">
+                  Lim inn en Finn.no lenke til boligen du vil analysere
+                </Typography>
+                <TextField
+                  fullWidth
+                  placeholder="f.eks. https://www.finn.no/realestate/homes/ad.html?finnkode=123456789"
+                  onChange={(e) => handleLinkSubmit(e.target.value)}
+                  helperText="Kopier lenken fra Finn.no annonsen og lim inn her"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LinkIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
               </Box>
             )}
           </Box>
