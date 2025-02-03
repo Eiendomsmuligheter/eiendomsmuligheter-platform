@@ -2,10 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Environment } from '@react-three/drei';
-import { Box, Typography, Paper, Tabs, Tab, IconButton } from '@mui/material';
+import { Box, Typography, Paper, Tabs, Tab, IconButton, CircularProgress } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { FaRuler, FaHome, FaTree, FaSun } from 'react-icons/fa';
+import { FaRuler, FaHome, FaTree, FaSun, FaVrCardboard } from 'react-icons/fa';
 import { PropertyData, Visualization } from '../../types';
+import OmniverseViewer from './OmniverseViewer';
 
 // Stiliserte komponenter
 const ViewerContainer = styled(Paper)(({ theme }) => ({
@@ -91,23 +92,30 @@ const PropertyViewer: React.FC<PropertyViewerProps> = ({ propertyData, visualiza
         </IconButton>
       </ControlsContainer>
 
-      <Canvas shadows>
-        <PerspectiveCamera makeDefault position={[10, 10, 10]} />
-        <OrbitControls enableDamping dampingFactor={0.05} />
-        
-        <ambientLight intensity={0.5} />
-        <directionalLight
-          position={[10, 10, 5]}
-          intensity={1}
-          castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
+{viewMode === '3d' ? (
+        <OmniverseViewer
+          modelData={visualization.model}
+          onSceneLoaded={() => console.log('Omniverse scene loaded')}
         />
-        
-        <Scene visualization={visualization} />
-        
-        <Environment preset={timeOfDay === 'day' ? 'sunset' : 'night'} />
-      </Canvas>
+      ) : (
+        <Canvas shadows>
+          <PerspectiveCamera makeDefault position={[10, 10, 10]} />
+          <OrbitControls enableDamping dampingFactor={0.05} />
+          
+          <ambientLight intensity={0.5} />
+          <directionalLight
+            position={[10, 10, 5]}
+            intensity={1}
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+          />
+          
+          <Scene visualization={visualization} />
+          
+          <Environment preset={timeOfDay === 'day' ? 'sunset' : 'night'} />
+        </Canvas>
+      )}
 
       {/* Informasjonspanel */}
       <Box

@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eiendomsmuligheter-platform
+  namespace: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: eiendomsmuligheter
+  template:
+    metadata:
+      labels:
+        app: eiendomsmuligheter
+    spec:
+      containers:
+      - name: frontend
+        image: eiendomsmuligheter/frontend:latest
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        env:
+        - name: API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: api_url
+        - name: AUTH0_DOMAIN
+          valueFrom:
+            secretKeyRef:
+              name: auth-secrets
+              key: auth0_domain
+        - name: STRIPE_PUBLIC_KEY
+          valueFrom:
+            secretKeyRef:
+              name: payment-secrets
+              key: stripe_public_key
+
+      - name: backend
+        image: eiendomsmuligheter/backend:latest
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1000m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: database_url
+        - name: AUTH0_API_IDENTIFIER
+          valueFrom:
+            secretKeyRef:
+              name: auth-secrets
+              key: auth0_api_identifier
+        - name: STRIPE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: payment-secrets
+              key: stripe_secret_key
+              
+      - name: ai-service
+        image: eiendomsmuligheter/ai-service:latest
+        ports:
+        - containerPort: 8001
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "2000m"
+          limits:
+            memory: "4Gi"
+            cpu: "4000m"
+        env:
+        - name: MODEL_PATH
+          value: "/models"
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: "all"
+        volumeMounts:
+        - name: model-storage
+          mountPath: "/models"
+
+      volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: model-storage-claim
