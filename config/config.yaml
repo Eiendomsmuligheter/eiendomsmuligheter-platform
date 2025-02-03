@@ -1,0 +1,64 @@
+application:
+  name: Eiendomsmuligheter Platform
+  version: 1.0.0
+  environment: development
+
+frontend:
+  port: 3000
+  api_url: http://localhost:8000
+  omniverse_integration:
+    enabled: true
+    api_key: YOUR_NVIDIA_API_KEY
+
+backend:
+  host: localhost
+  port: 8000
+  debug: true
+  database:
+    type: postgresql
+    host: localhost
+    port: 5432
+    name: eiendomsmuligheter_db
+    user: admin
+  redis:
+    host: localhost
+    port: 6379
+  
+ai_modules:
+  floor_plan_analyzer:
+    model_path: ./models/floor_plan_detection
+    confidence_threshold: 0.85
+  building_analyzer:
+    model_path: ./models/building_detection
+    enabled_features:
+      - room_detection
+      - facade_analysis
+      - structural_analysis
+  
+municipal_integration:
+  drammen:
+    api_url: https://innsyn2020.drammen.kommune.no/api
+    search_endpoint: /postjournal-v2
+    plan_endpoint: /plans
+  
+nvidia_integration:
+  omniverse:
+    enabled: true
+    connector_url: localhost:50051
+    quality_settings: high
+    ray_tracing: enabled
+
+security:
+  jwt_secret: YOUR_JWT_SECRET
+  token_expiry: 24h
+  allowed_origins:
+    - http://localhost:3000
+    - https://eiendomsmuligheter.no
+
+external_services:
+  enova:
+    api_url: https://api.enova.no
+    enabled: true
+  kartverket:
+    api_url: https://api.kartverket.no
+    enabled: true
