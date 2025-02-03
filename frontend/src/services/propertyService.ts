@@ -63,17 +63,126 @@ export const uploadProperty = async (file: File): Promise<{ fileId: string }> =>
   }
 };
 
-export const analyzeProperty = async (params: {
+export interface AnalysisProgress {
+  stage: string;
+  progress: number;
+  details?: string;
+}
+
+export interface AnalysisParams {
   address?: string;
-  fileId?: string;
-}): Promise<PropertyAnalysis> => {
+  files?: File[];
+  paymentIntentId?: string;
+  onProgress?: (progress: AnalysisProgress) => void;
+}
+
+export const validateAddress = async (address: string): Promise<boolean> => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/property/analyze`, params);
+    const response = await axios.post(`${API_BASE_URL}/property/validate-address`, {
+      address,
+    });
+    return response.data.valid;
+  } catch (error) {
+    console.error('Error validating address:', error);
+    throw new Error('Kunne ikke validere adressen');
+  }
+};
+
+export const getPropertyDetails = async (address: string): Promise<{
+  gnr: string;
+  bnr: string;
+  kommune: string;
+  kommuneNr: string;
+}> => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/property/details?address=${encodeURIComponent(address)}`
+    );
     return response.data;
+  } catch (error) {
+    console.error('Error fetching property details:', error);
+    throw new Error('Kunne ikke hente eiendomsdetaljer');
+  }
+};
+
+export const analyzeProperty = async ({
+  address,
+  files,
+  paymentIntentId,
+  onProgress,
+}: AnalysisParams): Promise<PropertyAnalysis> => {
+  try {
+    const formData = new FormData();
+    if (address) {
+      formData.append('address', address);
+    }
+    if (files) {
+      files.forEach((file, index) => {
+        formData.append(\`files[\${index}]\`, file);
+      });
+    }
+    if (paymentIntentId) {
+      formData.append('paymentIntentId', paymentIntentId);
+    }
+
+    const response = await axios.post(`${API_BASE_URL}/property/analyze`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          onProgress({
+            stage: 'upload',
+            progress: percentCompleted,
+            details: 'Laster opp filer...',
+          });
+        }
+      },
+    });
+
+    // Starter analyseprosessen
+    const analysisId = response.data.analysisId;
+    let analysis = await pollAnalysisStatus(analysisId, onProgress);
+
+    return analysis;
   } catch (error) {
     console.error('Error analyzing property:', error);
     throw error;
   }
+};
+
+const pollAnalysisStatus = async (
+  analysisId: string,
+  onProgress?: (progress: AnalysisProgress) => void
+): Promise<PropertyAnalysis> => {
+  const maxAttempts = 60; // 5 minutter med 5 sekunders intervall
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    const status = await axios.get(
+      `${API_BASE_URL}/property/analysis-status/${analysisId}`
+    );
+
+    if (status.data.completed) {
+      return status.data.results;
+    }
+
+    if (onProgress) {
+      onProgress({
+        stage: status.data.stage,
+        progress: status.data.progress,
+        details: status.data.details,
+      });
+    }
+
+    attempts++;
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+
+  throw new Error('Analyse tok for lang tid');
 };
 
 export const getMunicipalityRegulations = async (
