@@ -1,0 +1,72 @@
+{
+    "version": "1.0.0",
+    "name": "Eiendomsmuligheter Platform",
+    "description": "Verdens beste plattform for eiendomsanalyse og utvikling",
+    "api": {
+        "version": "v1",
+        "baseUrl": "/api/v1"
+    },
+    "services": {
+        "nvidia": {
+            "enabled": true,
+            "apiKey": "YOUR_NVIDIA_API_KEY",
+            "omniverse": {
+                "enabled": true,
+                "connectionString": "omniverse://localhost/EIENDOM"
+            }
+        },
+        "enova": {
+            "enabled": true,
+            "baseUrl": "https://api.enova.no",
+            "apiKey": "YOUR_ENOVA_API_KEY"
+        },
+        "municipality": {
+            "enabled": true,
+            "supportedMunicipalities": ["drammen", "oslo", "bergen"],
+            "defaultMunicipality": "drammen"
+        },
+        "payment": {
+            "provider": "stripe",
+            "publicKey": "YOUR_STRIPE_PUBLIC_KEY",
+            "secretKey": "YOUR_STRIPE_SECRET_KEY",
+            "webhookSecret": "YOUR_STRIPE_WEBHOOK_SECRET"
+        }
+    },
+    "features": {
+        "3dVisualization": true,
+        "aiAnalysis": true,
+        "documentGeneration": true,
+        "municipalityIntegration": true,
+        "enovaIntegration": true,
+        "paymentProcessing": true
+    },
+    "security": {
+        "auth0": {
+            "domain": "YOUR_AUTH0_DOMAIN",
+            "clientId": "YOUR_AUTH0_CLIENT_ID",
+            "clientSecret": "YOUR_AUTH0_CLIENT_SECRET"
+        },
+        "cors": {
+            "allowedOrigins": ["http://localhost:3000"],
+            "allowedMethods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        }
+    },
+    "database": {
+        "type": "postgresql",
+        "host": "localhost",
+        "port": 5432,
+        "name": "eiendomsmuligheter",
+        "user": "eiendom_user",
+        "password": "YOUR_DB_PASSWORD"
+    },
+    "cache": {
+        "type": "redis",
+        "host": "localhost",
+        "port": 6379
+    },
+    "storage": {
+        "type": "s3",
+        "bucket": "eiendomsmuligheter-storage",
+        "region": "eu-north-1"
+    }
+}

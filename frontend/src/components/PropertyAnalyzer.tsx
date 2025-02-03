@@ -1,85 +1,5 @@
-<<<<<<< HEAD
-import React, { useState, useEffect } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
-import {
-  Container,
-  Grid,
-  Paper,
-  Typography,
-  Button,
-  TextField,
-  CircularProgress
-} from '@material-ui/core';
-import { PropertyViewer } from './PropertyViewer';
-import { AnalysisResults } from './AnalysisResults';
-import { ModelControls } from './ModelControls';
-import { uploadProperty, analyzeProperty } from '../services/propertyService';
-
-const useStyles = makeStyles((theme) => ({
-  root: {
-    flexGrow: 1,
-    padding: theme.spacing(3),
-  },
-  paper: {
-    padding: theme.spacing(2),
-    textAlign: 'center',
-    color: theme.palette.text.secondary,
-  },
-  uploadSection: {
-    marginBottom: theme.spacing(3),
-  },
-  input: {
-    display: 'none',
-  },
-}));
-
-interface PropertyAnalyzerProps {
-  onAnalysisComplete?: (results: any) => void;
-}
-
-export const PropertyAnalyzer: React.FC<PropertyAnalyzerProps> = ({ onAnalysisComplete }) => {
-  const classes = useStyles();
-  const [addressInput, setAddressInput] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResults, setAnalysisResults] = useState<any>(null);
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setSelectedFile(event.target.files[0]);
-    }
-  };
-
-  const handleAddressSubmit = async () => {
-    if (!addressInput.trim()) return;
-    
-    setIsAnalyzing(true);
-    try {
-      const results = await analyzeProperty({ address: addressInput });
-      setAnalysisResults(results);
-      if (onAnalysisComplete) onAnalysisComplete(results);
-    } catch (error) {
-      console.error('Error analyzing property:', error);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleFileSubmit = async () => {
-    if (!selectedFile) return;
-
-    setIsAnalyzing(true);
-    try {
-      const uploadResult = await uploadProperty(selectedFile);
-      const results = await analyzeProperty({ fileId: uploadResult.fileId });
-      setAnalysisResults(results);
-      if (onAnalysisComplete) onAnalysisComplete(results);
-    } catch (error) {
-      console.error('Error processing file:', error);
-    } finally {
-      setIsAnalyzing(false);
-=======
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
 import {
   Box,
   Paper,
@@ -90,280 +10,208 @@ import {
   Step,
   StepLabel,
   CircularProgress,
-  Alert
+  Alert,
+  Grid,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import PropertyViewer from './PropertyViewer';
+import SearchIcon from '@mui/icons-material/Search';
+import { useHistory } from 'react-router-dom';
+import { PropertyViewer } from './PropertyViewer';
+import { AnalysisResults } from './AnalysisResults';
+import { ModelControls } from './ModelControls';
+import { analyzeProperty } from '../services/propertyService';
 
-const VisuallyHiddenInput = styled('input')`
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  height: 1px;
-  overflow: hidden;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  white-space: nowrap;
-  width: 1px;
-`;
+const DropzoneBox = styled(Box)(({ theme }) => ({
+  border: `2px dashed ${theme.palette.primary.main}`,
+  borderRadius: theme.shape.borderRadius,
+  padding: theme.spacing(4),
+  textAlign: 'center',
+  cursor: 'pointer',
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover,
+  },
+}));
 
 const steps = [
-  'Last opp eller angi adresse',
-  'Analyse pågår',
-  'Se resultater og anbefalinger'
+  'Velg analysemetode',
+  'Last opp filer eller angi adresse',
+  'Utfør analyse',
+  'Se resultater',
 ];
 
 interface PropertyAnalyzerProps {
-  onAnalysisComplete?: (result: any) => void;
+  onAnalysisComplete?: (results: any) => void;
 }
 
-const PropertyAnalyzer: React.FC<PropertyAnalyzerProps> = ({
-  onAnalysisComplete
-}) => {
+const PropertyAnalyzer: React.FC<PropertyAnalyzerProps> = ({ onAnalysisComplete }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [address, setAddress] = useState('');
-  const [files, setFiles] = useState<FileList | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [analysisResults, setAnalysisResults] = useState<any>(null);
+  const history = useHistory();
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setFiles(event.target.files);
-      setError(null);
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    setFiles(acceptedFiles);
+    setActiveStep(2);
+  }, []);
+
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png'],
+      'application/pdf': ['.pdf'],
+      'application/octet-stream': ['.dxf', '.dwg'],
+    },
+    maxFiles: 5,
+  });
+
+  const handleAddressSubmit = async () => {
+    if (!address.trim()) {
+      setError('Vennligst skriv inn en gyldig adresse');
+      return;
     }
+    setActiveStep(2);
+    await performAnalysis();
   };
 
-  const handleAddressChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setAddress(event.target.value);
+  const performAnalysis = async () => {
+    setIsAnalyzing(true);
     setError(null);
-  };
-
-  const validateInput = () => {
-    if (!files && !address) {
-      setError('Vennligst last opp filer eller angi en adresse');
-      return false;
-    }
-    return true;
-  };
-
-  const startAnalysis = async () => {
-    if (!validateInput()) return;
 
     try {
-      setLoading(true);
-      setActiveStep(1);
-
       const formData = new FormData();
-      if (files) {
-        Array.from(files).forEach(file => {
-          formData.append('files', file);
-        });
-      }
       if (address) {
         formData.append('address', address);
       }
-
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        body: formData
+      files.forEach((file) => {
+        formData.append('files', file);
       });
 
-      if (!response.ok) {
-        throw new Error('Analyse feilet');
-      }
-
-      const result = await response.json();
-      setAnalysisResult(result);
-      onAnalysisComplete?.(result);
-      setActiveStep(2);
+      const results = await analyzeProperty({ address, files });
+      setAnalysisResults(results);
+      if (onAnalysisComplete) onAnalysisComplete(results);
+      
+      setActiveStep(3);
+      history.push('/results/' + results.modelUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'En feil oppstod under analysen');
+      setError(
+        err instanceof Error ? err.message : 'En feil oppstod under analysen'
+      );
       setActiveStep(0);
     } finally {
-      setLoading(false);
+      setIsAnalyzing(false);
     }
   };
 
-  const renderStep = () => {
+  const renderContent = () => {
     switch (activeStep) {
       case 0:
         return (
-          <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              fullWidth
-              label="Eiendomsadresse"
-              value={address}
-              onChange={handleAddressChange}
-              placeholder="F.eks: Storgata 1, 0182 Oslo"
-            />
-
-            <Typography variant="body1" sx={{ mt: 2 }}>
-              Eller last opp filer:
-            </Typography>
-
-            <Button
-              component="label"
-              variant="contained"
-              startIcon={<CloudUploadIcon />}
-            >
-              Last opp filer
-              <VisuallyHiddenInput
-                type="file"
-                multiple
-                onChange={handleFileChange}
-                accept=".pdf,.png,.jpg,.jpeg,.dxf,.dwg"
-              />
-            </Button>
-
-            {files && (
-              <Box sx={{ mt: 1 }}>
-                <Typography variant="body2">
-                  Valgte filer: {Array.from(files).map(f => f.name).join(', ')}
-                </Typography>
-              </Box>
-            )}
-
-            {error && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {error}
-              </Alert>
-            )}
-
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={startAnalysis}
-              disabled={loading}
-              sx={{ mt: 2 }}
-            >
-              Start analyse
-            </Button>
-          </Box>
+          <Grid container spacing={3} justifyContent="center">
+            <Grid item xs={12} md={6}>
+              <Button
+                fullWidth
+                variant="contained"
+                size="large"
+                onClick={() => setActiveStep(1)}
+              >
+                Start analyse
+              </Button>
+            </Grid>
+          </Grid>
         );
 
       case 1:
         return (
-          <Box
-            sx={{
-              mt: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 2
-            }}
-          >
-            <CircularProgress />
-            <Typography>Analyserer eiendom...</Typography>
-          </Box>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Paper elevation={3} sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Søk på adresse
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <TextField
+                    fullWidth
+                    label="Skriv inn adresse"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="F.eks: Storgata 1, 0182 Oslo"
+                  />
+                  <Button
+                    variant="contained"
+                    startIcon={<SearchIcon />}
+                    onClick={handleAddressSubmit}
+                  >
+                    Søk
+                  </Button>
+                </Box>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Paper elevation={3} sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Last opp dokumenter
+                </Typography>
+                <DropzoneBox {...getRootProps()}>
+                  <input {...getInputProps()} />
+                  <CloudUploadIcon sx={{ fontSize: 40, color: 'primary.main' }} />
+                  <Typography variant="body1" sx={{ mt: 2 }}>
+                    Dra og slipp filer her, eller klikk for å velge filer
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Støtter JPG, PNG, PDF, DXF og DWG
+                  </Typography>
+                </DropzoneBox>
+              </Paper>
+            </Grid>
+          </Grid>
         );
 
       case 2:
         return (
-          <Box sx={{ mt: 3 }}>
-            <PropertyViewer
-              modelUrl={analysisResult?.modelUrl}
-              initialData={analysisResult}
-            />
+          <Box textAlign="center">
+            <CircularProgress />
+            <Typography variant="h6" sx={{ mt: 2 }}>
+              Analyserer eiendom...
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              Dette kan ta noen minutter
+            </Typography>
+          </Box>
+        );
+
+      case 3:
+        return (
+          <Box>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={8}>
+                <PropertyViewer
+                  property={analysisResults.property}
+                  modelUrl={analysisResults.modelUrl}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <ModelControls />
+              </Grid>
+              <Grid item xs={12}>
+                <AnalysisResults results={analysisResults} />
+              </Grid>
+            </Grid>
           </Box>
         );
 
       default:
         return null;
->>>>>>> 05b417208bb8af307dcc4b59d05bb20e32529392
     }
   };
 
   return (
-<<<<<<< HEAD
-    <Container className={classes.root}>
-      <Grid container spacing={3}>
-        <Grid item xs={12} className={classes.uploadSection}>
-          <Paper className={classes.paper}>
-            <Typography variant="h5" gutterBottom>
-              Analyser din eiendom
-            </Typography>
-            <Grid container spacing={2} justifyContent="center">
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Skriv inn adresse"
-                  variant="outlined"
-                  value={addressInput}
-                  onChange={(e) => setAddressInput(e.target.value)}
-                />
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleAddressSubmit}
-                  style={{ marginTop: '1rem' }}
-                  disabled={isAnalyzing}
-                >
-                  Analyser adresse
-                </Button>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <input
-                  accept="image/*,.pdf"
-                  className={classes.input}
-                  id="file-upload"
-                  type="file"
-                  onChange={handleFileUpload}
-                />
-                <label htmlFor="file-upload">
-                  <Button
-                    variant="contained"
-                    component="span"
-                    color="secondary"
-                    disabled={isAnalyzing}
-                  >
-                    Last opp bilde/PDF
-                  </Button>
-                </label>
-                {selectedFile && (
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleFileSubmit}
-                    style={{ marginLeft: '1rem' }}
-                    disabled={isAnalyzing}
-                  >
-                    Analyser fil
-                  </Button>
-                )}
-              </Grid>
-            </Grid>
-          </Paper>
-        </Grid>
-
-        {isAnalyzing && (
-          <Grid item xs={12}>
-            <Paper className={classes.paper}>
-              <CircularProgress />
-              <Typography>Analyserer eiendom...</Typography>
-            </Paper>
-          </Grid>
-        )}
-
-        {analysisResults && (
-          <>
-            <Grid item xs={12} md={8}>
-              <PropertyViewer property={analysisResults.property} />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <ModelControls />
-            </Grid>
-            <Grid item xs={12}>
-              <AnalysisResults results={analysisResults} />
-            </Grid>
-          </>
-        )}
-      </Grid>
-    </Container>
-=======
-    <Paper elevation={3} sx={{ p: 3 }}>
-      <Typography variant="h5" gutterBottom>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
+      <Typography variant="h4" gutterBottom align="center">
         Eiendomsanalyse
       </Typography>
 
@@ -375,9 +223,14 @@ const PropertyAnalyzer: React.FC<PropertyAnalyzerProps> = ({
         ))}
       </Stepper>
 
-      {renderStep()}
-    </Paper>
->>>>>>> 05b417208bb8af307dcc4b59d05bb20e32529392
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
+      {renderContent()}
+    </Box>
   );
 };
 
