@@ -69,8 +69,8 @@
 - ✅ Docker containerisering
 - ✅ Nginx reverse proxy
 - ✅ PostgreSQL database
-- ⏳ Database-migrasjoner (under utvikling)
-- ⏳ CI/CD pipeline (mangler)
+- ✅ Database-migrasjoner (implementert med Alembic)
+- ✅ CI/CD pipeline (implementert med GitHub Actions)
 - ⏳ Automatisert testing (under utvikling)
 
 ### API-er og Integrasjoner (90% ferdig)
