@@ -65,7 +65,7 @@ Sist oppdatert: 3. februar 2025
 - ✅ Energianalyse
 - ✅ Enova-støttevisning
 - ✅ Dokumentgenerering
-- ⏳ PDF-eksport (under utvikling)
+- ✅ PDF-eksport
 
 ### Backend Tjenester (100% ferdig)
 
@@ -97,7 +97,7 @@ Sist oppdatert: 3. februar 2025
 - ✅ Energiberegninger
 - ✅ Tiltaksanbefalinger
 - ✅ Støttebeløpskalkulasjon
-- ⏳ Automatisk søknadsgenerering (under utvikling)
+- ✅ Automatisk søknadsgenerering
 
 ## Gjenværende Oppgaver
 
