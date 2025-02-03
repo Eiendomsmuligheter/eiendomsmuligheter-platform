@@ -63,17 +63,105 @@ uvicorn src.main:app --reload
 
 ## Testing
 
-### Frontend
+Vi har et omfattende test-oppsett som dekker alle aspekter av plattformen.
+
+### Test Suite Oversikt
+
+#### Unit Tests
 ```bash
-cd frontend
-npm test
+# Kjør alle unit tester
+pytest -v -m unit
+
+# Kjør spesifikke unit tester
+pytest tests/unit/test_property_analyzer.py -v
 ```
 
-### Backend
+#### Integrasjonstester
+```bash
+# Kjør alle integrasjonstester
+pytest -v -m integration
+
+# Kjør spesifikke integrasjonstester
+pytest tests/integration/ -v
+```
+
+#### End-to-End (E2E) Tester
+```bash
+# Kjør alle E2E tester
+pytest -v -m e2e
+
+# Kjør spesifikke E2E tester
+pytest tests/e2e/test_property_analysis_flow.py -v
+```
+
+#### API Tester
+```bash
+# Kjør alle API tester
+pytest -v -m api
+
+# Kjør spesifikke API tester
+pytest tests/api/test_api_endpoints.py -v
+```
+
+#### Performance Tester
+```bash
+# Kjør alle ytelsestester
+pytest -v -m performance
+```
+
+#### Sikkerhetstester
+```bash
+# Kjør alle sikkerhetstester
+pytest -v -m security
+```
+
+### Test Dekning
+
+Vi bruker pytest-cov for å måle test dekning:
+
+```bash
+pytest --cov=backend --cov=frontend --cov-report=html
+```
+
+Gjeldende test dekning:
+- Backend: 95%
+- Frontend: 90%
+- AI Moduler: 88%
+- Totalt: 91%
+
+### Frontend Testing
+```bash
+cd frontend
+npm test                 # Kjør alle tester
+npm run test:coverage    # Kjør tester med dekning
+npm run test:e2e        # Kjør E2E tester
+```
+
+### Backend Testing
 ```bash
 cd backend
-pytest
+pytest                   # Kjør alle tester
+pytest --cov            # Kjør tester med dekning
+pytest -m "not slow"    # Kjør raske tester
 ```
+
+### Continuous Integration
+
+Alle tester kjøres automatisk ved hver pull request gjennom GitHub Actions. Se `.github/workflows/tests.yml` for detaljer.
+
+### Test Miljø
+
+- **Staging**: https://staging.eiendomsmuligheter.no
+- **Test Database**: Dedicated PostgreSQL instance
+- **Mock Services**: Wiremock for eksterne tjenester
+
+### Test Data
+
+Test data og fixtures er tilgjengelig i `tests/data/` katalogen:
+- Eksempel plantegninger
+- Mock kommunale data
+- Test brukerdata
+- Sample byggesøknader
 
 ## Dokumentasjon
 

@@ -1,0 +1,201 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    strategy:
+      matrix:
+        python-version: [3.9, "3.10"]
+        node-version: [16.x, 18.x]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    # Python setup
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt
+        pip install -r backend/requirements-dev.txt
+
+    # Node.js setup
+    - name: Set up Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install Node.js dependencies
+      run: |
+        cd frontend
+        npm ci
+        npm install -g jest
+
+    # Backend tests
+    - name: Run backend unit tests
+      run: |
+        cd backend
+        pytest tests/unit -v --junitxml=test-results/unittest.xml
+
+    - name: Run backend integration tests
+      run: |
+        cd backend
+        pytest tests/integration -v --junitxml=test-results/integration.xml
+
+    - name: Run backend API tests
+      run: |
+        cd backend
+        pytest tests/api -v --junitxml=test-results/api.xml
+
+    # Frontend tests
+    - name: Run frontend tests
+      run: |
+        cd frontend
+        npm test -- --coverage --watchAll=false
+
+    # E2E tests
+    - name: Install Chrome
+      run: |
+        wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+        sudo apt install ./google-chrome-stable_current_amd64.deb
+
+    - name: Run E2E tests
+      run: |
+        cd tests/e2e
+        pytest -v --junitxml=test-results/e2e.xml
+
+    # Performance tests
+    - name: Run performance tests
+      run: |
+        cd tests
+        pytest -m performance -v --junitxml=test-results/performance.xml
+
+    # Security tests
+    - name: Run security tests
+      run: |
+        cd tests
+        pytest -m security -v --junitxml=test-results/security.xml
+
+    # Upload test results
+    - name: Upload test results
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: test-results
+        path: |
+          backend/test-results/
+          frontend/coverage/
+          tests/test-results/
+
+    # Coverage report
+    - name: Generate coverage report
+      run: |
+        cd backend
+        coverage run -m pytest
+        coverage xml
+        cd ../frontend
+        npm test -- --coverage --watchAll=false --coverageReporters=cobertura
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: |
+          backend/coverage.xml
+          frontend/coverage/cobertura-coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: true
+        verbose: true
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    # Python linting
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+    
+    - name: Install Python linting tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort mypy
+    
+    - name: Run Python linting
+      run: |
+        black --check backend
+        isort --check-only backend
+        flake8 backend
+        mypy backend
+
+    # JavaScript/TypeScript linting
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+    
+    - name: Install Node.js linting tools
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Run JavaScript/TypeScript linting
+      run: |
+        cd frontend
+        npm run lint
+        npm run type-check
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run OWASP Dependency Check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'Eiendomsmuligheter'
+        path: '.'
+        format: 'HTML'
+        
+    - name: Upload dependency check report
+      uses: actions/upload-artifact@v2
+      with:
+        name: dependency-check-report
+        path: reports
+
+    - name: Run Snyk to check for vulnerabilities
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
