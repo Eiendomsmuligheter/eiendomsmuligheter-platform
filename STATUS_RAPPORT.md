@@ -2,7 +2,7 @@
 
 ## Implementerte Funksjoner
 
-### Frontend Komponenter (95% ferdig)
+### Frontend Komponenter (100% ferdig)
 #### 1. PropertyAnalyzer.tsx
 - ✅ Filopplasting
 - ✅ Adressesøk
@@ -71,7 +71,7 @@
 - ✅ PostgreSQL database
 - ✅ Database-migrasjoner (implementert med Alembic)
 - ✅ CI/CD pipeline (implementert med GitHub Actions)
-- ⏳ Automatisert testing (under utvikling)
+- ✅ Automatisert testing (implementert med full test-suite)
 
 ### API-er og Integrasjoner (90% ferdig)
 - ✅ FastAPI backend
