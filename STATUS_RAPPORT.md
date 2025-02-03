@@ -133,16 +133,44 @@
 - Lavprioritetsoppgaver: 1 uke
 - Total estimert tid til 100% ferdigstillelse: 3 uker
 
-## Teknisk Gjeld
-1. Manglende tester
-2. Ufullstendig feilhåndtering
-3. Manglende type-hinting i noen Python-filer
-4. Noen hardkodede verdier som burde være konfigurerbare
-5. Behov for bedre logging og overvåkning
+## Utvidet Funksjonalitet Under Utvikling
+### 1. Forbedret Byggesaksanalyse
+- 🔄 Automatisk GNR/BNR deteksjon fra adresse
+- 🔄 Integrert søk i byggesaksarkiv (2020 og tidligere)
+- 🔄 Automatisk vurdering av TEK10/TEK17 anvendelse
+- 🔄 Maskinlæring for reguleringsplananalyse
 
-## Anbefalte Neste Steg
-1. Implementere Stripe betalingsintegrasjon
-2. Fullføre databasemodeller og migrasjoner
-3. Implementere Auth0 autentisering
-4. Sette opp CI/CD pipeline
-5. Skrive ende-til-ende tester
+### 2. Avansert 3D-modellering
+- 🔄 NVIDIA Omniverse Enterprise-integrasjon
+- 🔄 Fotorealistisk materialhåndtering
+- 🔄 BIM-kompatibel eksport
+- 🔄 AR/VR-visualisering for befaring
+
+### 3. Automatisert Dokumentgenerering
+- 🔄 Intelligent utfylling av alle byggesaksskjemaer
+- 🔄 Automatisk generering av tekniske tegninger
+- 🔄 Situasjonsplan med høydekurver
+- 🔄 Komplett søknadspakke-generering
+
+### 4. Enova-integrasjon
+- 🔄 Dynamisk energiberegning
+- 🔄 Automatisk støtteberegning
+- 🔄 Tiltaksanalyse med ROI
+- 🔄 Søknadsgenerering for støtteordninger
+
+## Teknisk Gjeld
+1. Manglende ende-til-ende tester for byggesaksprosessen
+2. Ufullstendig feilhåndtering i OCR-modulen
+3. Manglende type-hinting i Python backend
+4. Optimalisering av 3D-rendering påkrevd
+5. Behov for forbedret logging og overvåkning
+6. Manglende automatisk oppdatering av kommunale forskrifter
+
+## Kritiske Neste Steg
+1. Implementere Stripe betalingsintegrasjon og prismodeller
+2. Fullføre automatisk byggesaksanalyse for Drammen kommune
+3. Implementere Auth0 autentisering med rollestyring
+4. Utvikle komplett BIM-integrasjon
+5. Ferdigstille automatisk søknadsgenerering
+6. Implementere avansert 3D-visualisering med NVIDIA Omniverse
+7. Etablere ende-til-ende testing av hele plattformen
