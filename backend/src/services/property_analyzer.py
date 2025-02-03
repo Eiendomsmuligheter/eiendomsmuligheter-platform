@@ -1,8 +1,10 @@
 import os
+import re
 import uuid
 import logging
-from typing import Optional, Dict, Any, List
-from fastapi import UploadFile
+import urllib.parse
+from typing import Optional, Dict, Any, List, Tuple
+from fastapi import UploadFile, HTTPException
 import numpy as np
 import cv2
 from PIL import Image
@@ -11,6 +13,11 @@ import json
 import aiohttp
 import asyncio
 from datetime import datetime
+from pathlib import Path
+import fitz  # PyMuPDF for PDF processing
+import ezdxf  # for CAD file processing
+from ..models.analysis import AnalysisSession, AnalysisResult
+from ..models.property import PropertyDetails, Room, BuildingRegulations
 
 class PropertyAnalyzer:
     def __init__(self):
@@ -37,18 +44,83 @@ class PropertyAnalyzer:
     async def analyze(
         self,
         address: Optional[str] = None,
-        file_id: Optional[str] = None
+        files: Optional[List[UploadFile]] = None,
+        payment_intent_id: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Analyze property based on address or uploaded file"""
+        """
+        Analyze property based on address and/or uploaded files
+        Args:
+            address: Property address
+            files: List of uploaded files (images, PDFs, CAD files)
+            payment_intent_id: Stripe payment intent ID
+        Returns:
+            Complete analysis including property details, potential, and recommendations
+        """
         try:
+            analysis_id = str(uuid.uuid4())
+            self.logger.info(f"Starting analysis {analysis_id}")
+            
+            # Start analysis session
+            session = await self._create_analysis_session(analysis_id, payment_intent_id)
+            
+            results = {
+                "analysis_id": analysis_id,
+                "status": "processing",
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+            
             if address:
-                return await self._analyze_from_address(address)
-            elif file_id:
-                return await self._analyze_from_file(file_id)
-            else:
-                raise ValueError("Either address or file_id must be provided")
+                # Analyze from address
+                address_results = await self._analyze_from_address(address)
+                results.update(address_results)
+            
+            if files:
+                # Process all uploaded files
+                file_results = await asyncio.gather(
+                    *[self._process_file(file) for file in files]
+                )
+                
+                # Combine results from all files
+                combined_results = await self._combine_file_results(file_results)
+                results.update(combined_results)
+            
+            # Validate results
+            if not results.get("property_details"):
+                raise ValueError("Could not determine property details")
+            
+            # Get municipality regulations
+            regulations = await self._get_municipality_regulations(
+                results["property_details"]["municipality_code"]
+            )
+            
+            # Analyze development potential
+            potential = await self.analyze_potential(
+                results["property_details"],
+                regulations
+            )
+            results["development_potential"] = potential
+            
+            # Analyze energy efficiency
+            energy = await self.analyze_energy(results["property_details"])
+            results["energy_analysis"] = energy
+            
+            # Generate recommendations
+            recommendations = await self._generate_recommendations(results)
+            results["recommendations"] = recommendations
+            
+            # Update status
+            results["status"] = "completed"
+            await self._update_analysis_session(analysis_id, results)
+            
+            return results
+            
         except Exception as e:
-            self.logger.error(f"Error in analysis: {str(e)}")
+            self.logger.error(f"Error in analysis {analysis_id}: {str(e)}")
+            if analysis_id:
+                await self._update_analysis_session(
+                    analysis_id,
+                    {"status": "failed", "error": str(e)}
+                )
             raise
 
     async def _analyze_from_address(self, address: str) -> Dict[str, Any]:
@@ -197,24 +269,333 @@ class PropertyAnalyzer:
             return {}
 
     def _analyze_rooms(self, contours) -> List[Dict[str, Any]]:
-        """Analyze rooms from contours"""
+        """
+        Analyze rooms from contours with advanced room recognition
+        Returns list of rooms with area, dimensions, and suggested usage
+        """
         rooms = []
         for contour in contours:
             area = cv2.contourArea(contour)
             if area > 100:  # Filter out small contours
                 x, y, w, h = cv2.boundingRect(contour)
+                perimeter = cv2.arcLength(contour, True)
+                approx = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
+                
+                # Analyze room shape
+                shape_factor = (4 * np.pi * area) / (perimeter ** 2)
+                rectangularity = area / (w * h)
+                
+                # Determine likely room type based on size and shape
+                room_type = self._determine_room_type(area, shape_factor, rectangularity)
+                
+                # Calculate minimum ceiling height based on room type
+                min_ceiling_height = self._get_min_ceiling_height(room_type)
+                
                 rooms.append({
                     "area": area,
-                    "dimensions": {"width": w, "height": h},
-                    "position": {"x": x, "y": y}
+                    "dimensions": {
+                        "width": w,
+                        "height": h,
+                        "min_ceiling_height": min_ceiling_height
+                    },
+                    "position": {"x": x, "y": y},
+                    "shape_analysis": {
+                        "corners": len(approx),
+                        "shape_factor": shape_factor,
+                        "rectangularity": rectangularity
+                    },
+                    "suggested_usage": room_type,
+                    "requirements": self._get_room_requirements(room_type)
                 })
+        
+        # Analyze room relationships
+        rooms = self._analyze_room_relationships(rooms)
         return rooms
+    
+    def _determine_room_type(
+        self,
+        area: float,
+        shape_factor: float,
+        rectangularity: float
+    ) -> str:
+        """Determine room type based on characteristics"""
+        if area < 5000:  # Less than 5m²
+            if rectangularity > 0.85:
+                return "bathroom"
+            else:
+                return "storage"
+        elif area < 10000:  # 5-10m²
+            if shape_factor > 0.8:
+                return "bedroom"
+            else:
+                return "kitchen"
+        elif area < 20000:  # 10-20m²
+            if rectangularity > 0.9:
+                return "living_room"
+            else:
+                return "dining_room"
+        else:  # Larger than 20m²
+            return "multi_purpose"
+    
+    def _get_min_ceiling_height(self, room_type: str) -> float:
+        """Get minimum ceiling height based on room type"""
+        heights = {
+            "living_room": 2.4,
+            "bedroom": 2.2,
+            "kitchen": 2.2,
+            "bathroom": 2.2,
+            "storage": 2.0,
+            "multi_purpose": 2.4
+        }
+        return heights.get(room_type, 2.2)
+    
+    def _get_room_requirements(self, room_type: str) -> List[str]:
+        """Get building code requirements for room type"""
+        requirements = {
+            "living_room": [
+                "Minimum ett vindu med lysareal minst 10% av gulvareal",
+                "Direkte tilgang til rømningsvei",
+                "God ventilasjon"
+            ],
+            "bedroom": [
+                "Minimum ett vindu med lysareal minst 10% av gulvareal",
+                "Rømningsvei via vindu eller dør",
+                "Minimum 7m² for enkeltrom"
+            ],
+            "kitchen": [
+                "Mekanisk avtrekk",
+                "Tilgang til vann og avløp",
+                "Minimum 30cm benkeplate på hver side av komfyr"
+            ],
+            "bathroom": [
+                "Vanntett membran på gulv og vegger",
+                "Mekanisk ventilasjon",
+                "Sluk i gulv"
+            ],
+            "storage": [
+                "Ventilasjon",
+                "Minimum 1.5m² dersom det er hovedbod"
+            ],
+            "multi_purpose": [
+                "Minimum ett vindu med lysareal minst 10% av gulvareal",
+                "God ventilasjon",
+                "Rømningsvei"
+            ]
+        }
+        return requirements.get(room_type, [])
 
+    def _analyze_room_relationships(self, rooms: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Analyze spatial relationships between rooms"""
+        for i, room in enumerate(rooms):
+            adjacent_rooms = []
+            room_center = (
+                room["position"]["x"] + room["dimensions"]["width"] / 2,
+                room["position"]["y"] + room["dimensions"]["height"] / 2
+            )
+            
+            for j, other in enumerate(rooms):
+                if i != j:
+                    other_center = (
+                        other["position"]["x"] + other["dimensions"]["width"] / 2,
+                        other["position"]["y"] + other["dimensions"]["height"] / 2
+                    )
+                    
+                    # Check if rooms are adjacent
+                    distance = np.sqrt(
+                        (room_center[0] - other_center[0]) ** 2 +
+                        (room_center[1] - other_center[1]) ** 2
+                    )
+                    
+                    if distance < (room["dimensions"]["width"] + other["dimensions"]["width"]) / 2:
+                        adjacent_rooms.append({
+                            "room_type": other["suggested_usage"],
+                            "direction": self._get_direction(room_center, other_center)
+                        })
+            
+            room["adjacent_rooms"] = adjacent_rooms
+            
+            # Add compatibility analysis
+            room["compatibility_issues"] = self._check_room_compatibility(
+                room["suggested_usage"],
+                adjacent_rooms
+            )
+        
+        return rooms
+    
+    def _get_direction(self, from_point: tuple, to_point: tuple) -> str:
+        """Determine relative direction between two points"""
+        dx = to_point[0] - from_point[0]
+        dy = to_point[1] - from_point[1]
+        
+        angle = np.arctan2(dy, dx) * 180 / np.pi
+        
+        if -45 <= angle <= 45:
+            return "east"
+        elif 45 < angle <= 135:
+            return "north"
+        elif angle > 135 or angle < -135:
+            return "west"
+        else:
+            return "south"
+    
+    def _check_room_compatibility(
+        self,
+        room_type: str,
+        adjacent_rooms: List[Dict[str, str]]
+    ) -> List[str]:
+        """Check for potential issues with room arrangements"""
+        issues = []
+        
+        # Define incompatible arrangements
+        incompatible = {
+            "kitchen": ["bathroom"],
+            "bedroom": ["kitchen"],
+            "living_room": ["bathroom"],
+        }
+        
+        # Check for incompatible adjacent rooms
+        if room_type in incompatible:
+            for adj in adjacent_rooms:
+                if adj["room_type"] in incompatible[room_type]:
+                    issues.append(
+                        f"Uheldig plassering: {room_type} bør ikke ligge inntil {adj['room_type']}"
+                    )
+        
+        return issues
+
+    async def _process_file(self, file: UploadFile) -> Dict[str, Any]:
+        """Process uploaded file with comprehensive analysis"""
+        try:
+            # Save file temporarily
+            temp_path = f"temp_{uuid.uuid4()}"
+            with open(temp_path, "wb") as f:
+                content = await file.read()
+                f.write(content)
+            
+            results = {}
+            
+            # Determine file type
+            file_type = file.content_type or self._guess_file_type(temp_path)
+            
+            if file_type.startswith("image/"):
+                # Process image
+                results["image_analysis"] = await self._analyze_image(temp_path)
+            elif file_type == "application/pdf":
+                # Process PDF
+                results["pdf_analysis"] = await self._analyze_pdf(temp_path)
+            elif file_type in ["application/dxf", "application/acad"]:
+                # Process CAD file
+                results["cad_analysis"] = await self._analyze_cad(temp_path)
+            
+            # Clean up
+            os.remove(temp_path)
+            
+            return results
+        except Exception as e:
+            self.logger.error(f"Error processing file: {str(e)}")
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            raise
+
+    def _guess_file_type(self, file_path: str) -> str:
+        """Guess file type from content"""
+        with open(file_path, "rb") as f:
+            header = f.read(1024)
+            
+        # Check for PDF
+        if header.startswith(b"%PDF"):
+            return "application/pdf"
+        
+        # Check for DXF
+        if b"SECTION" in header and b"HEADER" in header:
+            return "application/dxf"
+        
+        # Default to generic binary
+        return "application/octet-stream"
+    
+    async def _create_analysis_session(
+        self,
+        analysis_id: str,
+        payment_intent_id: Optional[str]
+    ) -> Dict[str, Any]:
+        """Create new analysis session"""
+        session = {
+            "analysis_id": analysis_id,
+            "payment_intent_id": payment_intent_id,
+            "status": "started",
+            "created_at": datetime.utcnow().isoformat(),
+            "last_updated": datetime.utcnow().isoformat()
+        }
+        
+        # Store session in database
+        # This would typically use a database, but for now we'll use a file
+        session_file = os.path.join(self.uploads_dir, f"{analysis_id}.json")
+        with open(session_file, "w") as f:
+            json.dump(session, f)
+        
+        return session
+    
+    async def _update_analysis_session(
+        self,
+        analysis_id: str,
+        updates: Dict[str, Any]
+    ) -> None:
+        """Update analysis session with new data"""
+        session_file = os.path.join(self.uploads_dir, f"{analysis_id}.json")
+        
+        if os.path.exists(session_file):
+            with open(session_file, "r") as f:
+                session = json.load(f)
+            
+            session.update(updates)
+            session["last_updated"] = datetime.utcnow().isoformat()
+            
+            with open(session_file, "w") as f:
+                json.dump(session, f)
+    
     async def _extract_address_from_text(self, text: str) -> Optional[str]:
-        """Extract address from OCR text"""
-        # This would need more sophisticated address parsing
-        # For now, return None
-        return None
+        """Extract address from OCR text using advanced pattern matching"""
+        try:
+            # Common address patterns in Norwegian
+            patterns = [
+                r'\b\d{1,5}\s+[A-ZÆØÅa-zæøå\s]+\d{4}\s+[A-ZÆØÅa-zæøå\s]+',  # Standard address
+                r'\b[A-ZÆØÅa-zæøå\s]+\s+\d{1,5}[A-Z]?\s+\d{4}\s+[A-ZÆØÅa-zæøå\s]+',  # Street first
+                r'\b[A-ZÆØÅa-zæøå\s]+\d{1,5}[A-Z]?,?\s*\d{4}\s+[A-ZÆØÅa-zæøå\s]+'  # Compact form
+            ]
+            
+            for pattern in patterns:
+                matches = re.finditer(pattern, text)
+                for match in matches:
+                    # Validate found address
+                    address = match.group(0).strip()
+                    if await self._validate_address_format(address):
+                        return address
+            
+            return None
+        except Exception as e:
+            self.logger.error(f"Error extracting address: {str(e)}")
+            return None
+    
+    async def _validate_address_format(self, address: str) -> bool:
+        """Validate address format and check if it exists"""
+        try:
+            # Check basic format
+            if not re.match(r'.*\d{4}.*', address):  # Must contain 4-digit postal code
+                return False
+            
+            # Validate against Kartverket
+            async with aiohttp.ClientSession() as session:
+                url = f"https://ws.geonorge.no/adresser/v1/sok?sok={urllib.parse.quote(address)}"
+                async with session.get(url) as response:
+                    if response.status != 200:
+                        return False
+                    
+                    data = await response.json()
+                    return len(data.get("adresser", [])) > 0
+                    
+        except Exception as e:
+            self.logger.error(f"Error validating address: {str(e)}")
+            return False
 
     async def analyze_potential(
         self,
