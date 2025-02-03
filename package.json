@@ -1,0 +1,33 @@
+{
+  "name": "eiendomsmuligheter-platform",
+  "version": "1.0.0",
+  "description": "Verdens beste plattform for eiendomsanalyse og utvikling",
+  "main": "index.js",
+  "scripts": {
+    "start": "concurrently \"npm run frontend\" \"npm run backend\"",
+    "frontend": "cd frontend && npm start",
+    "backend": "cd backend && npm start",
+    "test": "jest",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build"
+  },
+  "dependencies": {
+    "@nvidia/omniverse": "^1.0.0",
+    "react": "^18.2.0",
+    "react-three-fiber": "^8.0.0",
+    "three": "^0.160.0",
+    "fastapi": "^0.109.0",
+    "tensorflow": "^4.0.0",
+    "stripe": "^14.10.0",
+    "auth0": "^4.1.0",
+    "postgresql": "^8.11.3"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "typescript": "^5.3.3",
+    "concurrently": "^8.2.2"
+  },
+  "author": "Eiendomsmuligheter AS",
+  "license": "PROPRIETARY"
+}
