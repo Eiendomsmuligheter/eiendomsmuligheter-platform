@@ -1,0 +1,60 @@
+# Core Dependencies
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic[email]==2.5.3
+sqlalchemy==2.0.25
+alembic==1.13.1
+psycopg2-binary==2.9.9
+
+# Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.7
+bcrypt==4.1.2
+httpx==0.26.0
+
+# AI & ML
+numpy==1.26.3
+opencv-python-headless==4.9.0.80
+Pillow==10.2.0
+tensorflow==2.15.0
+torch==2.1.2
+torchvision==0.16.2
+transformers==4.36.2
+
+# 3D Processing
+open3d==0.17.0
+trimesh==4.0.5
+pyrender==0.1.45
+pytorch3d==0.7.5
+
+# NVIDIA Integration
+nvidia-omniverse-launcher>=2023.2.0
+usd-core>=23.11
+omni.kit.common>=2023.2.0
+
+# Utilities
+aiofiles==23.2.1
+requests==2.31.0
+aiohttp==3.9.1
+shapely==2.0.2
+scipy==1.11.4
+networkx==3.2.1
+matplotlib==3.8.2
+python-dotenv==1.0.0
+beautifulsoup4==4.12.2
+
+# Document Processing
+pytesseract==0.3.10
+reportlab==4.0.8
+PyMuPDF==1.23.8
+WeasyPrint==60.1
+
+# Testing & Development
+pytest==7.4.4
+pytest-asyncio==0.23.4
+pytest-cov==4.1.0
+mypy==1.8.0
+black==23.12.1
+isort==5.13.2
+flake8==7.0.0
