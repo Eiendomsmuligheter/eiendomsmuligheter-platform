@@ -1,0 +1,121 @@
+{
+    "municipality_code": "3005",
+    "name": "Drammen kommune",
+    "api_version": "1.0",
+    "last_updated": "2025-02-06T12:00:00+01:00",
+    "regulations": {
+        "residential": {
+            "default_max_height": 9.0,
+            "default_utilization_rate": 30.0,
+            "min_distance_to_boundary": 4.0,
+            "parking_requirements": {
+                "car": {
+                    "min_spaces_per_unit": 1.0,
+                    "visitor_spaces_per_unit": 0.2
+                },
+                "bicycle": {
+                    "min_spaces_per_unit": 2.0
+                }
+            }
+        },
+        "zones": {
+            "central": {
+                "max_height": 16.0,
+                "max_utilization_rate": 60.0,
+                "min_distance_to_boundary": 4.0
+            },
+            "suburban": {
+                "max_height": 9.0,
+                "max_utilization_rate": 35.0,
+                "min_distance_to_boundary": 4.0
+            },
+            "rural": {
+                "max_height": 8.0,
+                "max_utilization_rate": 25.0,
+                "min_distance_to_boundary": 4.0
+            }
+        }
+    },
+    "fees": {
+        "building_application": {
+            "base_fee": 15000,
+            "area_based_fee": {
+                "rate_per_sqm": 150,
+                "min_fee": 5000,
+                "max_fee": 150000
+            },
+            "dispensation_fee": 8000,
+            "preliminary_conference": 3000
+        },
+        "connection_fees": {
+            "water": {
+                "base_fee": 15000,
+                "rate_per_sqm": 200
+            },
+            "sewage": {
+                "base_fee": 15000,
+                "rate_per_sqm": 200
+            }
+        }
+    },
+    "processing_times": {
+        "simple_application": {
+            "typical_days": 21,
+            "max_days": 42
+        },
+        "complex_application": {
+            "typical_days": 84,
+            "max_days": 126
+        },
+        "dispensation": {
+            "typical_days": 120,
+            "max_days": 180
+        }
+    },
+    "zoning_categories": {
+        "bolig": {
+            "code": "1110",
+            "description": "Boligbebyggelse",
+            "allowed_uses": ["residential", "home_office"],
+            "restrictions": {
+                "noise_limit_db": 55,
+                "min_outdoor_area_sqm": 50
+            }
+        },
+        "sentrum": {
+            "code": "1130",
+            "description": "Sentrumsformål",
+            "allowed_uses": ["residential", "commercial", "office", "public"],
+            "restrictions": {
+                "noise_limit_db": 65,
+                "min_outdoor_area_sqm": 25
+            }
+        }
+    },
+    "document_requirements": {
+        "building_application": {
+            "mandatory": [
+                "application_form",
+                "situation_plan",
+                "floor_plans",
+                "facade_drawings",
+                "cross_section"
+            ],
+            "conditional": {
+                "dispensation_request": "Ved søknad om dispensasjon",
+                "fire_concept": "For større bygg",
+                "drainage_plan": "Ved endring av terreng"
+            }
+        }
+    },
+    "contact_info": {
+        "building_department": {
+            "email": "byggesak@drammen.kommune.no",
+            "phone": "+47 32 04 00 00",
+            "visiting_address": "Engene 1, 3015 Drammen",
+            "opening_hours": {
+                "monday_friday": "08:00-15:30"
+            }
+        }
+    }
+}
