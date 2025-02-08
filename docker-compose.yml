@@ -8,8 +8,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - REACT_APP_API_BASE_URL=http://localhost:8000/api
-      - REACT_APP_NVIDIA_ENABLED=true
+      - REACT_APP_API_URL=http://localhost:8000
+      - NODE_ENV=development
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -23,7 +23,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/eiendomsmuligheter
+      - DATABASE_URL=postgresql://user:password@db:5432/eiendomsdb
+      - REDIS_URL=redis://redis:6379/0
       - JWT_SECRET=your-secret-key
       - ENVIRONMENT=development
       - NVIDIA_VISIBLE_DEVICES=all
@@ -44,11 +45,11 @@ services:
   db:
     image: postgres:13
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=eiendomsmuligheter
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=eiendomsdb
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
@@ -71,6 +72,6 @@ services:
       - backend
 
 volumes:
-  postgres_data:
+  postgres-data:
   redis-data:
   upload-data:
