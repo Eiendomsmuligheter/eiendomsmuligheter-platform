@@ -1,0 +1,63 @@
+version: 2
+updates:
+  # Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: "master"
+    labels:
+      - "dependencies"
+      - "security"
+    assignees:
+      - "Eiendomsmuligheter"
+    reviewers:
+      - "Eiendomsmuligheter"
+    commit-message:
+      prefix: "pip"
+      include: "scope"
+    open-pull-requests-limit: 10
+    pull-request-branch-name:
+      separator: "-"
+    groups:
+      production-dependencies:
+        patterns:
+          - "*"
+    ignore:
+      # Ignore major version updates for tensorflow to maintain compatibility
+      - dependency-name: "tensorflow"
+        update-types: ["version-update:semver-major"]
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "master"
+    labels:
+      - "docker"
+      - "dependencies"
+    assignees:
+      - "Eiendomsmuligheter"
+    reviewers:
+      - "Eiendomsmuligheter"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "master"
+    labels:
+      - "actions"
+      - "dependencies"
+    assignees:
+      - "Eiendomsmuligheter"
+    reviewers:
+      - "Eiendomsmuligheter"
+    commit-message:
+      prefix: "github-actions"
+      include: "scope"
