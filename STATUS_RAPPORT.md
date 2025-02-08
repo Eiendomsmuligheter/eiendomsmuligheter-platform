@@ -96,9 +96,9 @@
    - JWT-håndtering
 
 3. Database
-   - Fullføre databasemodeller
-   - Sette opp migrasjoner
-   - Implementere caching
+   - ✅ Fullføre databasemodeller
+   - ✅ Sette opp migrasjoner
+   - ⏳ Implementere caching
 
 ### Medium Prioritet
 1. Testing
