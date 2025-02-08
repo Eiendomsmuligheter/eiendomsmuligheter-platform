@@ -80,7 +80,7 @@
 - ✅ Kartverket-integrasjon
 - ✅ Kommune-API integrasjon
 - ⏳ Stripe betalingsintegrasjon (mangler)
-- ⏳ Auth0 autentisering (mangler)
+- ✅ Auth0 autentisering
 
 ## Gjenværende Oppgaver
 
