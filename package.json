@@ -13,15 +13,19 @@
     "build:backend": "cd backend && npm run build"
   },
   "dependencies": {
-    "@nvidia/omniverse": "^1.0.0",
+    "@nvidia/omniverse": "^1.2.0",
     "react": "^18.2.0",
-    "react-three-fiber": "^8.0.0",
-    "three": "^0.160.0",
-    "fastapi": "^0.109.0",
-    "tensorflow": "^4.0.0",
-    "stripe": "^14.10.0",
-    "auth0": "^4.1.0",
-    "postgresql": "^8.11.3"
+    "react-three-fiber": "^8.15.0",
+    "three": "^0.161.0",
+    "fastapi": "^0.109.2",
+    "tensorflow": "^4.15.0",
+    "stripe": "^14.17.0",
+    "auth0": "^4.2.0",
+    "postgresql": "^8.11.3",
+    "lodash": "^4.17.21",
+    "crypto-js": "^4.2.0",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5"
   },
   "devDependencies": {
     "jest": "^29.7.0",
