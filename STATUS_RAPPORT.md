@@ -128,17 +128,17 @@
 - Dokumentasjon: 95%
 - Ytelse og Sikkerhet: 90%
 
-### Siste Oppdateringer (03.02.2025)
-1. Implementert komplett betalingsløsning med Stripe
-2. Lagt til avansert eiendomsanalyse med maskinlæring
-3. Implementert 3D-visualisering med NVIDIA Omniverse
-4. Utviklet automatisk byggesøknadsgenerator
-5. Integrert Auth0 for sikker autentisering
-6. Oppgradert alle avhengigheter til siste sikre versjoner
-7. Implementert ende-til-ende testing
-8. Lagt til automatisk dokumentgenerering
-9. Forbedret brukergrensesnitt og responsivitet
-10. Optimalisert ytelse og skalering
+### Siste Oppdateringer (09.02.2025)
+1. Implementert omfattende prissystem med detaljerte pakker for alle tjenester
+2. Utviklet moderne og brukervennlig betalingsgrensesnitt med Stripe-integrasjon
+3. Lagt til kategorisert visning av tjenester (analyse, tegning, energi, byggesøknad)
+4. Implementert dynamisk prisvisning med animasjoner og responsivt design
+5. Integrert automatisk faktureringssystem
+6. Lagt til rabattstruktur for pakkeløsninger
+7. Implementert sanntids valideringer av betalinger
+8. Utviklet automatisk kvitteringsgenerering
+9. Forbedret brukeropplevelsen med animerte overganger
+10. Optimalisert mobilvisning av priser og betalingsflyt
 
 ### Siste Sikkerhetsoppdateringer (03.02.2025)
 1. Implementert HTTPS med Let's Encrypt
