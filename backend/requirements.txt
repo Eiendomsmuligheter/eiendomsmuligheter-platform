@@ -14,7 +14,7 @@ requests==2.31.0
 aiohttp==3.9.1
 numpy==1.26.3
 opencv-python==4.9.0.80
-Pillow==10.1.0
+Pillow==10.2.0
 shapely==2.0.2
 scipy==1.11.4
 networkx==3.2.1
@@ -46,4 +46,4 @@ safety==2.3.5
 types-requests==2.31.0.10
 types-python-jose==3.3.4.8
 types-beautifulsoup4==4.12.0.7
-types-Pillow==10.1.0.2
+types-Pillow==10.2.0

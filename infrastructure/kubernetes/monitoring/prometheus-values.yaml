@@ -1,0 +1,57 @@
+alertmanager:
+  enabled: true
+  config:
+    global:
+      slack_api_url: '${SLACK_WEBHOOK_URL}'
+    route:
+      receiver: 'slack-notifications'
+      group_by: ['alertname', 'cluster', 'service']
+    receivers:
+    - name: 'slack-notifications'
+      slack_configs:
+      - channel: '#alerts'
+        text: "{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}"
+
+server:
+  persistentVolume:
+    size: 50Gi
+
+serverFiles:
+  prometheus.yml:
+    scrape_configs:
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - target_label: __address__
+            replacement: kubernetes.default.svc:443
+          - source_labels: [__meta_kubernetes_node_name]
+            target_label: node
+
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+
+      - job_name: 'property-analyzer'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: property-analyzer
+          - source_labels: [__meta_kubernetes_pod_container_port_number]
+            action: keep
+            regex: 8000

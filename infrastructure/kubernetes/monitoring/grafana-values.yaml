@@ -1,0 +1,60 @@
+adminUser: admin
+adminPassword: "${GRAFANA_ADMIN_PASSWORD}"
+
+persistence:
+  enabled: true
+  size: 10Gi
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus-server
+      isDefault: true
+      access: proxy
+      version: 1
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards
+
+dashboards:
+  default:
+    property-analyzer-dashboard:
+      gnetId: 13105
+      revision: 1
+      datasource: Prometheus
+    
+    kubernetes-cluster-monitoring:
+      gnetId: 315
+      revision: 3
+      datasource: Prometheus
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: monitoring.eiendomsmuligheter.no
+      paths:
+        - path: /
+  tls:
+    - secretName: grafana-tls
+      hosts:
+        - monitoring.eiendomsmuligheter.no

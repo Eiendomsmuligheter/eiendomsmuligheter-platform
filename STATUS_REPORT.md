@@ -107,12 +107,12 @@ Sist oppdatert: 9. februar 2025
 
 ## Gjenværende Oppgaver
 
-### Høyest Prioritet
+### Høyest Prioritet (Delvis Ferdig)
 1. Testing og Kvalitetssikring
-   - Ende-til-ende tester
-   - Stresstesting
-   - Sikkerhetstesting
-   - Ytelsesoptimalisering
+   - ✅ Ende-til-ende tester implementert
+   - ✅ Stresstesting med Locust implementert
+   - ✅ Sikkerhetstesting med CodeQL og Snyk
+   - Ytelsesoptimalisering pågår
 
 2. Dokumentasjon
    - Komplett API-dokumentasjon
@@ -121,10 +121,10 @@ Sist oppdatert: 9. februar 2025
    - Installasjonsveiledning
 
 3. DevOps og Infrastruktur
-   - CI/CD pipeline
-   - Kubernetes-konfigurasjon
-   - Monitoring og logging
-   - Backup-rutiner
+   - ✅ CI/CD pipeline implementert med GitHub Actions
+   - ✅ Kubernetes-konfigurasjon implementert
+   - ✅ Monitoring med Prometheus og Grafana implementert
+   - ✅ Automatiske backup-rutiner konfigurert
 
 ### Medium Prioritet
 1. Brukeropplevelse
