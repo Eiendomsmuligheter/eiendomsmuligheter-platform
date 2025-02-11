@@ -128,9 +128,9 @@ Sist oppdatert: 9. februar 2025
    - Ytelsesoptimalisering pågår
 
 2. Dokumentasjon
-   - Komplett API-dokumentasjon
-   - Brukermanual
-   - Utviklerdokumentasjon
+   - ✅ Komplett API-dokumentasjon
+   - ✅ Brukermanual
+   - ✅ Utviklerdokumentasjon
    - Installasjonsveiledning
 
 3. DevOps og Infrastruktur
