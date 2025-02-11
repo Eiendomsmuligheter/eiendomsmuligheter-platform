@@ -23,7 +23,7 @@
 - ✅ Interaktive kontroller
 - ✅ Flere visningsmodi (3D, plantegning, fasade)
 - ✅ Zoom og rotasjon
-- ⏳ Lag-styring for ulike bygningsdeler (under utvikling)
+- ✅ Lag-styring for ulike bygningsdeler
 
 #### 3. ModelControls.tsx
 - ✅ 3D-navigasjonskontroller
