@@ -2279,12 +2279,12 @@ class RegulationAnalyzer:
     if municipality.lower() in ["drammen", "bergen", "stavanger"]:
         utnyttelse = regulation_plan.get("allowed_utilization", 25.0)
         summary_parts.append(f"Merk at {municipality.capitalize()} kommune tillater {utnyttelse}% BYA, noe som gir gode muligheter for utvidelse.")
-            
-        # Hvis ingen potensiale er funnet
-        if not summary_parts:
-            return "Basert på gjeldende reguleringsplan og bygningsinformasjon ser det ut til at eiendommen allerede er godt utnyttet uten vesentlig utviklingspotensial."
-            
-        return " ".join(summary_parts)
+        
+    # Hvis ingen potensiale er funnet
+    if not summary_parts:
+        return "Basert på gjeldende reguleringsplan og bygningsinformasjon ser det ut til at eiendommen allerede er godt utnyttet uten vesentlig utviklingspotensial."
+        
+    return " ".join(summary_parts)
     
     async def get_similar_cases(self, gnr: int, bnr: int, municipality: str, case_type: str) -> List[Dict]:
         """
