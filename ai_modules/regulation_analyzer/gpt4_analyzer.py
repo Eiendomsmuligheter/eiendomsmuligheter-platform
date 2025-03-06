@@ -2255,36 +2255,36 @@ class RegulationAnalyzer:
         }
         
         return min_sizes.get(municipality.lower(), 600.0)  # Standard 600m² hvis ukjent
-            
-    def _generate_potential_summary(self, potential: Dict, regulation_plan: Dict, municipality: str) -> str:
-    """
-    Lager en oppsummering av eiendommens utviklingspotensial
-    """
-    summary_parts = []
     
-    # Inkluderer boligtype, BYA og tomtestørrelse hvis tilgjengelig
-    if potential["build_out_potential"] > 0:
-        summary_parts.append(f"Eiendommen har potensial for tilbygg på inntil {potential['build_out_potential']:.1f} m².")
+    def _generate_potential_summary(self, potential: Dict, regulation_plan: Dict, municipality: str) -> str:
+        """
+        Lager en oppsummering av eiendommens utviklingspotensial
+        """
+        summary_parts = []
         
-    if potential["build_up_potential"] > 0:
-        summary_parts.append(f"Det er mulig å bygge på en eller flere etasjer, totalt {potential['build_up_potential']:.1f} m² ekstra areal.")
+        # Inkluderer boligtype, BYA og tomtestørrelse hvis tilgjengelig
+        if potential["build_out_potential"] > 0:
+            summary_parts.append(f"Eiendommen har potensial for tilbygg på inntil {potential['build_out_potential']:.1f} m².")
+            
+        if potential["build_up_potential"] > 0:
+            summary_parts.append(f"Det er mulig å bygge på en eller flere etasjer, totalt {potential['build_up_potential']:.1f} m² ekstra areal.")
+            
+        if potential["subdivision_potential"]:
+            summary_parts.append(f"Tomten er stor nok til å kunne søke om fradeling av en egen tomt.")
+            
+        if potential["rental_unit_potential"]:
+            summary_parts.append(f"Boligen har potensial for etablering av utleieenhet, forutsatt at tekniske krav oppfylles.")
+            
+        # Legg til kommunespesifikk informasjon om nødvendig
+        if municipality.lower() in ["drammen", "bergen", "stavanger"]:
+            utnyttelse = regulation_plan.get("allowed_utilization", 25.0)
+            summary_parts.append(f"Merk at {municipality.capitalize()} kommune tillater {utnyttelse}% BYA, noe som gir gode muligheter for utvidelse.")
         
-    if potential["subdivision_potential"]:
-        summary_parts.append(f"Tomten er stor nok til å kunne søke om fradeling av en egen tomt.")
-        
-    if potential["rental_unit_potential"]:
-        summary_parts.append(f"Boligen har potensial for etablering av utleieenhet, forutsatt at tekniske krav oppfylles.")
-        
-    # Legg til kommunespesifikk informasjon om nødvendig
-    if municipality.lower() in ["drammen", "bergen", "stavanger"]:
-        utnyttelse = regulation_plan.get("allowed_utilization", 25.0)
-        summary_parts.append(f"Merk at {municipality.capitalize()} kommune tillater {utnyttelse}% BYA, noe som gir gode muligheter for utvidelse.")
-        
-    # Hvis ingen potensiale er funnet
-    if not summary_parts:
-        return "Basert på gjeldende reguleringsplan og bygningsinformasjon ser det ut til at eiendommen allerede er godt utnyttet uten vesentlig utviklingspotensial."
-        
-    return " ".join(summary_parts)
+        # Hvis ingen potensiale er funnet
+        if not summary_parts:
+            return "Basert på gjeldende reguleringsplan og bygningsinformasjon ser det ut til at eiendommen allerede er godt utnyttet uten vesentlig utviklingspotensial."
+            
+        return " ".join(summary_parts)
     
     async def get_similar_cases(self, gnr: int, bnr: int, municipality: str, case_type: str) -> List[Dict]:
         """
