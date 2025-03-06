@@ -2107,4 +2107,1182 @@ class PropertyAnalyzer:
         if rental_options:
             top_rental = rental_options[0]
             rental_cost = top_rental.get("estimated_cost", 0)
-            rental
+            rental_income = top_rental.get("estimated_monthly_rent", 0) * 12  # Årlig
+            rental_roi = top_rental.get("roi_years", float('inf'))
+            
+            if rental_cost <= budget_limit:
+                scenarios.append({
+                    "name": "Utleie",
+                    "description": top_rental.get("description", "Konvertering til utleieenhet"),
+                    "primary_focus": "rental_income",
+                    "actions": [top_rental],
+                    "total_cost": rental_cost,
+                    "annual_income": rental_income,
+                    "roi_years": rental_roi,
+                    "implementation_time_months": 6,
+                    "suitable_for_preferences": priority == "rental_income"
+                })
+        
+        # Scenario 2: Utvidelse
+        if expansion_options:
+            top_expansion = expansion_options[0]
+            expansion_cost = top_expansion.get("estimated_cost", 0)
+            value_increase = top_expansion.get("value_increase", 0)
+            expansion_roi = top_expansion.get("roi_percentage", 0) / 100  # Konvertere til desimal
+            
+            if expansion_cost <= budget_limit:
+                scenarios.append({
+                    "name": "Utvidelse",
+                    "description": top_expansion.get("description", "Utvidelse av boligarealet"),
+                    "primary_focus": "value_increase",
+                    "actions": [top_expansion],
+                    "total_cost": expansion_cost,
+                    "value_increase": value_increase,
+                    "roi_percentage": expansion_roi * 100,  # Tilbake til prosent
+                    "implementation_time_months": 12,
+                    "suitable_for_preferences": priority == "value_increase"
+                })
+        
+        # Scenario 3: Tomtedeling
+        if division_options.get("feasible", False):
+            division_cost = division_options.get("division_costs", {}).get("total", 0)
+            value_increase = division_options.get("value_estimate", {}).get("value_increase", 0)
+            division_roi = division_options.get("roi_percentage", 0) / 100  # Konvertere til desimal
+            
+            if division_cost <= budget_limit:
+                scenarios.append({
+                    "name": "Tomtedeling",
+                    "description": "Dele tomten for å selge deler av eiendommen",
+                    "primary_focus": "value_increase",
+                    "actions": [division_options],
+                    "total_cost": division_cost,
+                    "value_increase": value_increase,
+                    "roi_percentage": division_roi * 100,  # Tilbake til prosent
+                    "implementation_time_months": 18,
+                    "suitable_for_preferences": priority == "value_increase" and timeframe == "long"
+                })
+        
+        # Scenario 4: Renovering
+        if renovation_needs:
+            high_priority_renovations = [r for r in renovation_needs if r.get("priority") == "high"]
+            
+            if high_priority_renovations:
+                renovation_cost = sum(r.get("estimated_cost", 0) for r in high_priority_renovations)
+                renovation_value_increase = sum(r.get("value_increase", 0) for r in high_priority_renovations)
+                renovation_roi = renovation_value_increase / renovation_cost if renovation_cost > 0 else 0
+                
+                if renovation_cost <= budget_limit:
+                    scenarios.append({
+                        "name": "Renovering",
+                        "description": "Utføre høyprioriterte renovasjoner",
+                        "primary_focus": "maintenance",
+                        "actions": high_priority_renovations,
+                        "total_cost": renovation_cost,
+                        "value_increase": renovation_value_increase,
+                        "roi_percentage": renovation_roi * 100,
+                        "implementation_time_months": 3,
+                        "suitable_for_preferences": priority == "minimal_cost" or budget == "low"
+                    })
+        
+        # Scenario 5: Kombinert (hvis budsjett tillater)
+        combined_options = []
+        combined_cost = 0
+        combined_income = 0
+        combined_value_increase = 0
+        
+        # Legg til høyprioriterte renoveringer
+        for renovation in renovation_needs:
+            if renovation.get("priority") == "high" and combined_cost + renovation.get("estimated_cost", 0) <= budget_limit:
+                combined_options.append(renovation)
+                combined_cost += renovation.get("estimated_cost", 0)
+                combined_value_increase += renovation.get("value_increase", 0)
+        
+        # Legg til beste utleiemulighet
+        if rental_options and combined_cost + rental_options[0].get("estimated_cost", 0) <= budget_limit:
+            combined_options.append(rental_options[0])
+            combined_cost += rental_options[0].get("estimated_cost", 0)
+            combined_income += rental_options[0].get("estimated_monthly_rent", 0) * 12
+            combined_value_increase += rental_options[0].get("estimated_monthly_rent", 0) * 12 * 10  # 10x årlig inntekt som verdiøkning
+        
+        if combined_options and len(combined_options) > 1:
+            combined_roi = (combined_income + (combined_value_increase * 0.1)) / combined_cost  # Vektet ROI
+            
+            scenarios.append({
+                "name": "Kombinert tilnærming",
+                "description": "Kombinere nødvendige renoveringer med inntektsmuligheter",
+                "primary_focus": "balanced",
+                "actions": combined_options,
+                "total_cost": combined_cost,
+                "annual_income": combined_income,
+                "value_increase": combined_value_increase,
+                "roi_percentage": combined_roi * 100,
+                "implementation_time_months": 9,
+                "suitable_for_preferences": True  # En balansert tilnærming passer ofte for de fleste
+            })
+        
+        # Velg optimalt scenario
+        if not scenarios:
+            return {
+                "name": "Ingen tiltak",
+                "description": "Ingen egnede scenarier funnet innenfor gitte preferanser",
+                "reason": "Budsjett eller tidsramme for restriktiv, eller mangel på muligheter"
+            }
+        
+        # Vurder ulike faktorer for å finne det optimale scenariet
+        for scenario in scenarios:
+            scenario["score"] = 0
+            
+            # Høy score hvis det passer kundepreferanser
+            if scenario.get("suitable_for_preferences", False):
+                scenario["score"] += 30
+            
+            # Score basert på ROI
+            if "roi_percentage" in scenario:
+                scenario["score"] += min(scenario["roi_percentage"] / 2, 30)  # Maks 30 poeng for ROI
+            elif "roi_years" in scenario:
+                roi_years = scenario["roi_years"]
+                if roi_years > 0:
+                    scenario["score"] += min(30 / roi_years, 30)  # Maks 30 poeng for ROI
+            
+            # Score basert på implementeringstid
+            impl_time = scenario.get("implementation_time_months", 12)
+            time_score = max(0, 20 - (abs(impl_time - timeframe_months) / 2))
+            scenario["score"] += time_score
+            
+            # Score basert på totalkostnad i forhold til budsjett
+            cost_ratio = scenario.get("total_cost", 0) / budget_limit
+            if cost_ratio <= 1.0:
+                scenario["score"] += 20 * (1 - cost_ratio/2)  # Høyere score for lavere kostnadsandel
+        
+        # Sorter scenarioer etter score
+        scenarios.sort(key=lambda x: x.get("score", 0), reverse=True)
+        optimal = scenarios[0]
+        
+        # Fjern hjelpefelt
+        if "score" in optimal:
+            del optimal["score"]
+        
+        # Legg til alternative scenarier
+        alternatives = [s for s in scenarios[1:3]] if len(scenarios) > 1 else []
+        for alt in alternatives:
+            if "score" in alt:
+                del alt["score"]
+        
+        optimal["alternatives"] = alternatives
+        
+        return optimal
+    
+    async def _generate_3d_model(self, property_data: Dict, structure_analysis: Dict) -> Dict:
+        """Genererer detaljert 3D-modell med NVIDIA Omniverse"""
+        logger.info("Genererer 3D-modell")
+        
+        try:
+            # Sjekk om vi har tilstrekkelig data
+            if not property_data or not structure_analysis:
+                logger.warning("Utilstrekkelig data for 3D-modellgenerering")
+                return {
+                    "error": "Utilstrekkelig data for 3D-modellgenerering",
+                    "model_url": None
+                }
+            
+            # Hent plantegningsdata hvis tilgjengelig
+            floor_plan_data = property_data.get("floor_plan_analysis", {})
+            
+            # Generer 3D-modell basert på tilgjengelige data
+            model_url = await self._create_3d_model(property_data, structure_analysis)
+            
+            # Generer plantegninger
+            floor_plans = self._generate_floor_plans(structure_analysis)
+            
+            # Generer fasadetegninger
+            facade_drawings = self._generate_facade_drawings(structure_analysis)
+            
+            # Generer situasjonsplan
+            site_plan = self._generate_site_plan(property_data)
+            
+            return {
+                "model_url": model_url,
+                "floor_plans": floor_plans,
+                "facade_drawings": facade_drawings,
+                "site_plan": site_plan,
+                "viewer_options": {
+                    "show_measurements": True,
+                    "enable_cutaway_view": True,
+                    "enable_daylight_simulation": True
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Feil ved generering av 3D-modell: {str(e)}")
+            return {
+                "error": str(e),
+                "model_url": None
+            }
+    
+    async def _create_3d_model(self, property_data: Dict, structure_analysis: Dict) -> str:
+        """Genererer 3D-modell med NVIDIA Omniverse"""
+        # I en reell implementasjon ville dette integrere med Omniverse
+        # For nå, returner en dummy-URL
+        
+        return "https://example.com/models/property_3d_model.glb"
+    
+    def _generate_floor_plans(self, structure_analysis: Dict) -> List[Dict]:
+        """Genererer plantegninger for hver etasje"""
+        floor_plans = []
+        
+        # Generer plantegning for hver etasje
+        for floor in structure_analysis.get("floors", []):
+            floor_plans.append({
+                "floor_number": floor.get("floor_number", 0),
+                "url": f"https://example.com/floor_plans/floor_{floor.get('floor_number', 0)}.png",
+                "area_m2": floor.get("area_m2", 0),
+                "room_count": floor.get("room_count", 0)
+            })
+        
+        # Legg til kjeller hvis den eksisterer
+        basement = structure_analysis.get("basement", {})
+        if basement.get("exists", False):
+            floor_plans.append({
+                "floor_number": -1,
+                "url": "https://example.com/floor_plans/basement.png",
+                "area_m2": basement.get("info", {}).get("area_m2", 0),
+                "room_count": basement.get("info", {}).get("room_count", 0)
+            })
+        
+        # Legg til loft hvis det eksisterer
+        attic = structure_analysis.get("attic", {})
+        if attic.get("exists", False):
+            floor_plans.append({
+                "floor_number": len(structure_analysis.get("floors", [])) + 1,
+                "url": "https://example.com/floor_plans/attic.png",
+                "area_m2": attic.get("info", {}).get("area_m2", 0),
+                "room_count": attic.get("info", {}).get("room_count", 0)
+            })
+        
+        return floor_plans
+    
+    def _generate_facade_drawings(self, structure_analysis: Dict) -> Dict:
+        """Genererer fasadetegninger"""
+        return {
+            "north": "https://example.com/facades/north.png",
+            "south": "https://example.com/facades/south.png",
+            "east": "https://example.com/facades/east.png",
+            "west": "https://example.com/facades/west.png"
+        }
+    
+    def _generate_site_plan(self, property_data: Dict) -> str:
+        """Genererer situasjonsplan"""
+        return "https://example.com/site_plan.png"
+    
+    async def _perform_energy_analysis(self, property_data: Dict) -> Dict:
+        """Utfører energianalyse og identifiserer forbedringspotensial"""
+        logger.info("Utfører energianalyse")
+        
+        try:
+            # Bruk EnergyAnalyzer-modulen hvis tilgjengelig
+            if "energy_analyzer" in self.processors:
+                energy_analyzer = self.processors["energy_analyzer"]
+                
+                # Samle bygningsdata
+                building_data = self._prepare_building_data_for_energy_analysis(property_data)
+                
+                # Samle konstruksjonsdetaljer
+                construction_details = self._prepare_construction_details(property_data)
+                
+                # Kjør energianalyse
+                energy_analysis = await energy_analyzer.analyze_energy_performance(
+                    building_data,
+                    construction_details
+                )
+                
+                return energy_analysis
+            else:
+                logger.warning("EnergyAnalyzer ikke tilgjengelig")
+                return self._simple_energy_analysis(property_data)
+                
+        except Exception as e:
+            logger.error(f"Feil ved energianalyse: {str(e)}")
+            return {
+                "error": str(e),
+                "current_rating": "Unknown",
+                "potential_rating": "Unknown"
+            }
+    
+    def _prepare_building_data_for_energy_analysis(self, property_data: Dict) -> Dict:
+        """Forbereder bygningsdata for energianalyse"""
+        # Hent relevant data
+        structure_analysis = property_data.get("structure_analysis", {})
+        measurements = structure_analysis.get("measurements", {})
+        construction_type = structure_analysis.get("construction_type", {})
+        
+        # Beregn oppvarmet areal
+        heated_area = measurements.get("total_area_m2", 0)
+        
+        # Beregn volum (antar standard takhøyde hvis ikke spesifisert)
+        ceiling_height = 2.4  # Standard
+        volume = heated_area * ceiling_height
+        
+        # Hent byggeår
+        construction_year = construction_type.get("construction_year", 1970)
+        
+        return {
+            "heated_area": heated_area,
+            "volume": volume,
+            "construction_year": construction_year,
+            "building_type": "residential",
+            "number_of_floors": len(structure_analysis.get("floors", [])),
+            "location": property_data.get("address_info", {}).get("components", {}).get("city", "Oslo")
+        }
+    
+    def _prepare_construction_details(self, property_data: Dict) -> Dict:
+        """Forbereder konstruksjonsdetaljer for energianalyse"""
+        structure_analysis = property_data.get("structure_analysis", {})
+        construction_type = structure_analysis.get("construction_type", {})
+        
+        # Hent primært byggemateriale
+        primary_material = construction_type.get("primary_material", "unknown")
+        
+        # Bestem konstruksjonsdetaljer basert på byggeår og materiale
+        construction_year = construction_type.get("construction_year", 1970)
+        
+        # Definer U-verdier basert på byggeår
+        if construction_year < 1970:
+            u_values = {
+                "walls": 0.8,
+                "roof": 0.6,
+                "floor": 0.6,
+                "windows": 2.6
+            }
+        elif construction_year < 1985:
+            u_values = {
+                "walls": 0.4,
+                "roof": 0.3,
+                "floor": 0.3,
+                "windows": 2.1
+            }
+        elif construction_year < 2000:
+            u_values = {
+                "walls": 0.3,
+                "roof": 0.2,
+                "floor": 0.25,
+                "windows": 1.6
+            }
+        elif construction_year < 2010:
+            u_values = {
+                "walls": 0.22,
+                "roof": 0.18,
+                "floor": 0.18,
+                "windows": 1.2
+            }
+        else:
+            u_values = {
+                "walls": 0.18,
+                "roof": 0.13,
+                "floor": 0.15,
+                "windows": 0.8
+            }
+        
+        # Juster basert på materiale
+        if primary_material == "wood":
+            u_values["walls"] *= 0.9  # Bedre for tre
+        elif primary_material == "concrete":
+            u_values["walls"] *= 1.1  # Verre for betong
+        
+        return {
+            "walls": {
+                "material": primary_material,
+                "u_value": u_values["walls"],
+                "area": structure_analysis.get("measurements", {}).get("estimated_facade_area_m2", 100)
+            },
+            "roof": {
+                "material": "composite",
+                "u_value": u_values["roof"],
+                "area": structure_analysis.get("measurements", {}).get("total_area_m2", 100) / len(structure_analysis.get("floors", [1]))
+            },
+            "floor": {
+                "material": "concrete",
+                "u_value": u_values["floor"],
+                "area": structure_analysis.get("measurements", {}).get("total_area_m2", 100) / len(structure_analysis.get("floors", [1]))
+            },
+            "windows": {
+                "type": "double_glazed" if construction_year >= 1985 else "single_glazed",
+                "u_value": u_values["windows"],
+                "area": structure_analysis.get("measurements", {}).get("total_area_m2", 100) * 0.15  # Antar 15% av gulvareal
+            }
+        }
+    
+    def _simple_energy_analysis(self, property_data: Dict) -> Dict:
+        """Enkel energianalyse når EnergyAnalyzer ikke er tilgjengelig"""
+        # Hent byggeår
+        structure_analysis = property_data.get("structure_analysis", {})
+        construction_type = structure_analysis.get("construction_type", {})
+        construction_year = construction_type.get("construction_year", 1970)
+        
+        # Bestem energimerke basert på byggeår
+        current_rating = None
+        if construction_year < 1970:
+            current_rating = "F"
+        elif construction_year < 1985:
+            current_rating = "E"
+        elif construction_year < 2000:
+            current_rating = "D"
+        elif construction_year < 2010:
+            current_rating = "C"
+        else:
+            current_rating = "B"
+        
+        # Estimer potensielt energimerke etter oppgradering
+        potential_rating = chr(ord(current_rating) - 2) if current_rating > "C" else "B"
+        
+        # Estimer energibehov
+        heated_area = structure_analysis.get("measurements", {}).get("total_area_m2", 100)
+        current_energy_demand = None
+        
+        if current_rating == "F":
+            current_energy_demand = heated_area * 280  # kWh/år
+        elif current_rating == "E":
+            current_energy_demand = heated_area * 220  # kWh/år
+        elif current_rating == "D":
+            current_energy_demand = heated_area * 170  # kWh/år
+        elif current_rating == "C":
+            current_energy_demand = heated_area * 120  # kWh/år
+        elif current_rating == "B":
+            current_energy_demand = heated_area * 90   # kWh/år
+        else:
+            current_energy_demand = heated_area * 65   # kWh/år
+        
+        # Estimer potensielt energibehov etter forbedringer
+        potential_energy_demand = heated_area * 100  # kWh/år
+        energy_saving = max(0, current_energy_demand - potential_energy_demand)
+        
+        # Estimer kostnadsbesparelse (antatt 1.2 NOK/kWh)
+        annual_cost_saving = energy_saving * 1.2
+        
+        # Identifiser forbedringstiltak
+        improvement_measures = []
+        
+        if construction_year < 2000:
+            improvement_measures.append({
+                "type": "insulation",
+                "description": "Etterisolering av yttervegg",
+                "cost": heated_area * 700,  # 700 NOK/m² BRA
+                "energy_saving": heated_area * 40,  # kWh/år
+                "roi_years": heated_area * 700 / (heated_area * 40 * 1.2)
+            })
+        
+        if construction_year < 2010:
+            improvement_measures.append({
+                "type": "windows",
+                "description": "Utskifting til energieffektive vinduer",
+                "cost": heated_area * 0.15 * 5000,  # 5000 NOK/m² vindusareal (15% av BRA)
+                "energy_saving": heated_area * 30,  # kWh/år
+                "roi_years": (heated_area * 0.15 * 5000) / (heated_area * 30 * 1.2)
+            })
+        
+        improvement_measures.append({
+            "type": "heat_pump",
+            "description": "Installering av luft-til-luft varmepumpe",
+            "cost": 25000,  # NOK
+            "energy_saving": heated_area * 50,  # kWh/år
+            "roi_years": 25000 / (heated_area * 50 * 1.2)
+        })
+        
+        # Sorter tiltak etter tilbakebetalingstid
+        improvement_measures.sort(key=lambda x: x.get("roi_years", float('inf')))
+        
+        # Beregn Enova-støtte
+        enova_support = self._calculate_enova_support(improvement_measures)
+        
+        return {
+            "current_rating": current_rating,
+            "potential_rating": potential_rating,
+            "current_energy_demand": current_energy_demand,
+            "potential_energy_demand": potential_energy_demand,
+            "energy_saving": energy_saving,
+            "annual_cost_saving": annual_cost_saving,
+            "improvement_measures": improvement_measures,
+            "enova_support": enova_support
+        }
+    
+    def _calculate_enova_support(self, improvement_measures: List[Dict]) -> Dict:
+        """Beregner støtte fra Enova for energitiltak"""
+        support_rates = self.config.get("enova", {}).get("support_rates", {})
+        
+        total_support = 0
+        supported_measures = []
+        
+        for measure in improvement_measures:
+            measure_type = measure.get("type")
+            support_amount = 0
+            
+            if measure_type == "heat_pump":
+                support_amount = support_rates.get("heat_pump", 10000)
+            elif measure_type == "insulation":
+                # Basert på areal (antatt 20% av BRA)
+                area = measure.get("cost", 0) / 700  # 700 NOK/m²
+                insulation_area = area * 0.2
+                support_amount = insulation_area * support_rates.get("insulation", 500)
+            elif measure_type == "windows":
+                # Basert på antall vinduer (antatt 1 vindu per 5 m² fasade)
+                window_area = measure.get("cost", 0) / 5000  # 5000 NOK/m²
+                window_count = window_area / 1.2  # Antatt 1.2 m² per vindu
+                support_amount = window_count * support_rates.get("windows", 1000)
+            
+            if support_amount > 0:
+                supported_measures.append({
+                    "type": measure_type,
+                    "description": measure.get("description", ""),
+                    "support_amount": support_amount
+                })
+                total_support += support_amount
+        
+        return {
+            "total_support": total_support,
+            "supported_measures": supported_measures,
+            "application_url": "https://www.enova.no/privat/alle-energitiltak/",
+            "requirements": [
+                "Tiltakene må være gjennomført av fagfolk",
+                "Dokumentasjon på utført arbeid må vedlegges søknaden",
+                "Søknad må sendes inn innen 60 dager etter ferdigstillelse"
+            ]
+        }
+    
+    async def _estimate_costs(self, development_potential: Dict) -> Dict:
+        """Estimerer kostnader for ulike utviklingsmuligheter"""
+        logger.info("Estimerer kostnader")
+        
+        try:
+            # Hent all relevant data
+            rental_options = development_potential.get("rental_units", [])
+            expansion_options = development_potential.get("expansion_possibilities", [])
+            renovation_needs = development_potential.get("renovation_needs", [])
+            division_options = development_potential.get("property_division", {})
+            
+            # Beregn renoveringskostnader
+            renovation_costs = self._calculate_renovation_costs(renovation_needs)
+            
+            # Beregn konverteringskostnader
+            conversion_costs = self._calculate_conversion_costs(rental_options)
+            
+            # Beregn utvidelseskostnader
+            expansion_costs = self._calculate_expansion_costs(expansion_options)
+            
+            # Estimer potensielle inntekter
+            potential_revenue = self._estimate_revenue(
+                rental_options,
+                expansion_options,
+                division_options
+            )
+            
+            # Beregn ROI
+            roi_analysis = self._calculate_roi_metrics(
+                renovation_costs, 
+                conversion_costs, 
+                expansion_costs, 
+                potential_revenue
+            )
+            
+            return {
+                "renovation_costs": renovation_costs,
+                "conversion_costs": conversion_costs,
+                "expansion_costs": expansion_costs,
+                "potential_revenue": potential_revenue,
+                "roi_analysis": roi_analysis,
+                "funding_options": self._suggest_funding_options(
+                    renovation_costs, 
+                    conversion_costs, 
+                    expansion_costs
+                )
+            }
+            
+        except Exception as e:
+            logger.error(f"Feil ved kostnadsestimering: {str(e)}")
+            return {
+                "error": str(e),
+                "renovation_costs": {},
+                "conversion_costs": {},
+                "expansion_costs": {},
+                "potential_revenue": {}
+            }
+    
+    def _calculate_renovation_costs(self, renovation_needs: List[Dict]) -> Dict:
+        """Beregner kostnader for renoveringsbehovene"""
+        if not renovation_needs:
+            return {"total": 0, "items": []}
+        
+        renovation_items = []
+        total_cost = 0
+        
+        for need in renovation_needs:
+            cost = need.get("estimated_cost", 0)
+            renovation_items.append({
+                "type": need.get("type", "unknown"),
+                "description": need.get("description", ""),
+                "cost": cost,
+                "priority": need.get("priority", "medium")
+            })
+            total_cost += cost
+        
+        # Sorter etter prioritet
+        priority_order = {"high": 0, "medium": 1, "low": 2}
+        renovation_items.sort(key=lambda x: priority_order.get(x.get("priority", "medium"), 1))
+        
+        return {
+            "total": total_cost,
+            "items": renovation_items,
+            "cost_per_square_meter": total_cost / 100  # Dummy-verdi hvis vi ikke har areal
+        }
+    
+    def _calculate_conversion_costs(self, rental_options: List[Dict]) -> Dict:
+        """Beregner kostnader for konvertering til utleieenheter"""
+        if not rental_options:
+            return {"total": 0, "options": []}
+        
+        conversion_options = []
+        total_cost = 0
+        
+        for option in rental_options:
+            cost = option.get("estimated_cost", 0)
+            conversion_options.append({
+                "type": option.get("type", "unknown"),
+                "description": option.get("description", ""),
+                "cost": cost,
+                "area_m2": option.get("area_m2", 0),
+                "cost_per_square_meter": cost / option.get("area_m2", 1) if option.get("area_m2", 0) > 0 else 0
+            })
+            total_cost += cost
+        
+        return {
+            "total": total_cost,
+            "options": conversion_options
+        }
+    
+    def _calculate_expansion_costs(self, expansion_options: List[Dict]) -> Dict:
+        """Beregner kostnader for utvidelse"""
+        if not expansion_options:
+            return {"total": 0, "options": []}
+        
+        expansion_items = []
+        total_cost = 0
+        
+        for option in expansion_options:
+            cost = option.get("estimated_cost", 0)
+            expansion_items.append({
+                "type": option.get("type", "unknown"),
+                "description": option.get("description", ""),
+                "cost": cost,
+                "area_m2": option.get("area_m2", 0),
+                "cost_per_square_meter": cost / option.get("area_m2", 1) if option.get("area_m2", 0) > 0 else 0
+            })
+            total_cost += cost
+        
+        return {
+            "total": total_cost,
+            "options": expansion_items
+        }
+    
+    def _estimate_revenue(self,
+                        rental_options: List[Dict],
+                        expansion_options: List[Dict],
+                        division_options: Dict) -> Dict:
+        """Estimerer potensielle inntekter"""
+        # Beregn leieinntekter
+        rental_income = {
+            "monthly": sum(option.get("estimated_monthly_rent", 0) for option in rental_options),
+            "annual": sum(option.get("estimated_monthly_rent", 0) * 12 for option in rental_options),
+            "options": [{
+                "type": option.get("type", "unknown"),
+                "description": option.get("description", ""),
+                "monthly_income": option.get("estimated_monthly_rent", 0),
+                "annual_income": option.get("estimated_monthly_rent", 0) * 12,
+                "roi_years": option.get("roi_years", 0)
+            } for option in rental_options]
+        }
+        
+        # Beregn verdiøkning
+        value_increase = {
+            "total": sum(option.get("value_increase", 0) for option in expansion_options),
+            "options": [{
+                "type": option.get("type", "unknown"),
+                "description": option.get("description", ""),
+                "increase_amount": option.get("value_increase", 0),
+                "roi_percentage": option.get("roi_percentage", 0)
+            } for option in expansion_options]
+        }
+        
+        # Legg til tomtedeling hvis aktuelt
+        if division_options.get("feasible", False):
+            division_value = division_options.get("value_estimate", {}).get("value_increase", 0)
+            value_increase["total"] += division_value
+            value_increase["options"].append({
+                "type": "property_division",
+                "description": "Tomtedeling og salg",
+                "increase_amount": division_value,
+                "roi_percentage": division_options.get("roi_percentage", 0)
+            })
+        
+        return {
+            "rental_income": rental_income,
+            "value_increase": value_increase,
+            "total_annual_benefit": rental_income["annual"] + (value_increase["total"] * 0.05)  # Antar 5% årlig avkastning på verdiøkning
+        }
+    
+    def _calculate_roi_metrics(self,
+                             renovation_costs: Dict,
+                             conversion_costs: Dict,
+                             expansion_costs: Dict,
+                             potential_revenue: Dict) -> Dict:
+        """Beregner ROI-metrics for ulike scenarier"""
+        # Total kostnad
+        total_cost = renovation_costs.get("total", 0) + conversion_costs.get("total", 0) + expansion_costs.get("total", 0)
+        
+        # Årlig fordel
+        annual_benefit = potential_revenue.get("total_annual_benefit", 0)
+        
+        # ROI beregning
+        roi_percentage = (annual_benefit / total_cost) * 100 if total_cost > 0 else 0
+        payback_years = total_cost / annual_benefit if annual_benefit > 0 else float('inf')
+        
+        # Analyse av scenarier
+        scenarios = []
+        
+        # Scenario 1: Kun renovering
+        if renovation_costs.get("total", 0) > 0:
+            # Antar 5% verdiøkning av eiendommen fra renovering
+            renovation_value_increase = renovation_costs.get("total", 0) * 1.2  # 20% verdiøkning
+            renovation_annual_benefit = renovation_value_increase * 0.05  # 5% årlig avkastning
+            renovation_roi = (renovation_annual_benefit / renovation_costs.get("total", 0)) * 100 if renovation_costs.get("total", 0) > 0 else 0
+            
+            scenarios.append({
+                "name": "Kun renovering",
+                "cost": renovation_costs.get("total", 0),
+                "annual_benefit": renovation_annual_benefit,
+                "roi_percentage": renovation_roi,
+                "payback_years": renovation_costs.get("total", 0) / renovation_annual_benefit if renovation_annual_benefit > 0 else float('inf')
+            })
+        
+        # Scenario 2: Kun utleie
+        if conversion_costs.get("total", 0) > 0 and potential_revenue.get("rental_income", {}).get("annual", 0) > 0:
+            rental_annual_benefit = potential_revenue.get("rental_income", {}).get("annual", 0)
+            rental_roi = (rental_annual_benefit / conversion_costs.get("total", 0)) * 100 if conversion_costs.get("total", 0) > 0 else 0
+            
+            scenarios.append({
+                "name": "Kun utleie",
+                "cost": conversion_costs.get("total", 0),
+                "annual_benefit": rental_annual_benefit,
+                "roi_percentage": rental_roi,
+                "payback_years": conversion_costs.get("total", 0) / rental_annual_benefit if rental_annual_benefit > 0 else float('inf')
+            })
+        
+        # Scenario 3: Kun utvidelse
+        if expansion_costs.get("total", 0) > 0 and potential_revenue.get("value_increase", {}).get("total", 0) > 0:
+            expansion_value_increase = potential_revenue.get("value_increase", {}).get("total", 0)
+            expansion_annual_benefit = expansion_value_increase * 0.05  # 5% årlig avkastning
+            expansion_roi = (expansion_annual_benefit / expansion_costs.get("total", 0)) * 100 if expansion_costs.get("total", 0) > 0 else 0
+            
+            scenarios.append({
+                "name": "Kun utvidelse",
+                "cost": expansion_costs.get("total", 0),
+                "annual_benefit": expansion_annual_benefit,
+                "roi_percentage": expansion_roi,
+                "payback_years": expansion_costs.get("total", 0) / expansion_annual_benefit if expansion_annual_benefit > 0 else float('inf')
+            })
+        
+        # Sorter scenarier etter ROI
+        scenarios.sort(key=lambda x: x.get("roi_percentage", 0), reverse=True)
+        
+        return {
+            "total_investment": total_cost,
+            "annual_benefit": annual_benefit,
+            "overall_roi_percentage": roi_percentage,
+            "payback_years": payback_years,
+            "best_scenario": scenarios[0] if scenarios else None,
+            "scenarios": scenarios
+        }
+    
+    def _suggest_funding_options(self,
+                               renovation_costs: Dict,
+                               conversion_costs: Dict,
+                               expansion_costs: Dict) -> List[Dict]:
+        """Foreslår finansieringsalternativer basert på kostnader"""
+        total_cost = renovation_costs.get("total", 0) + conversion_costs.get("total", 0) + expansion_costs.get("total", 0)
+        
+        if total_cost == 0:
+            return []
+        
+        funding_options = []
+        
+        # Alternativ 1: Boliglån
+        funding_options.append({
+            "type": "mortgage",
+            "name": "Boliglån",
+            "description": "Utvide eksisterende boliglån eller ta opp nytt lån med sikkerhet i eiendommen",
+            "typical_interest_rate": "3.5-4.5%",
+            "typical_term_years": 20,
+            "requirements": [
+                "Tilstrekkelig egenkapital (normalt minst 15%)",
+                "God betalingsevne",
+                "Sikkerhet i eiendommen"
+            ],
+            "monthly_payment": self._calculate_monthly_loan_payment(total_cost, 0.04, 20),
+            "suitable_for": ["store investeringer", "langsiktige prosjekter"]
+        })
+        
+        # Alternativ 2: Forbrukslån
+        if total_cost < 500000:
+            funding_options.append({
+                "type": "consumer_loan",
+                "name": "Forbrukslån",
+                "description": "Usikret lån for mindre renoveringer",
+                "typical_interest_rate": "8-12%",
+                "typical_term_years": 5,
+                "requirements": [
+                    "God kredittscore",
+                    "Stabil inntekt"
+                ],
+                "monthly_payment": self._calculate_monthly_loan_payment(total_cost, 0.1, 5),
+                "suitable_for": ["mindre prosjekter", "kortsiktige investeringer"]
+            })
+        
+        # Alternativ 3: Husbankens grunnlån
+        if renovation_costs.get("total", 0) > 0:
+            funding_options.append({
+                "type": "husbanken",
+                "name": "Husbankens grunnlån",
+                "description": "Lån til boligforbedring med fokus på energieffektivisering",
+                "typical_interest_rate": "2.5-3.5%",
+                "typical_term_years": 30,
+                "requirements": [
+                    "Prosjektet må møte Husbankens kvalitetskrav",
+                    "Fokus på energieffektivisering",
+                    "Universell utforming"
+                ],
+                "monthly_payment": self._calculate_monthly_loan_payment(renovation_costs.get("total", 0), 0.03, 30),
+                "suitable_for": ["energioppgradering", "tilpasning av bolig", "miljøvennlige løsninger"]
+            })
+        
+        # Alternativ 4: Enova-støtte
+        if renovation_costs.get("total", 0) > 0:
+            funding_options.append({
+                "type": "enova",
+                "name": "Enova-støtte",
+                "description": "Tilskudd til energieffektivisering",
+                "requirements": [
+                    "Prosjektet må kvalifisere for Enovas støtteordninger",
+                    "Dokumentasjon på utført arbeid"
+                ],
+                "typical_amount": min(renovation_costs.get("total", 0) * 0.2, 100000),  # Maks 20% eller 100,000 NOK
+                "suitable_for": ["energitiltak", "varmepumper", "etterisolering"]
+            })
+        
+        return funding_options
+    
+    def _calculate_monthly_loan_payment(self, loan_amount: float, annual_interest_rate: float, term_years: int) -> float:
+        """Beregner månedlig lånebetaling"""
+        if loan_amount <= 0 or annual_interest_rate <= 0 or term_years <= 0:
+            return 0
+            
+        monthly_rate = annual_interest_rate / 12
+        num_payments = term_years * 12
+        
+        monthly_payment = loan_amount * (monthly_rate * (1 + monthly_rate) ** num_payments) / ((1 + monthly_rate) ** num_payments - 1)
+        
+        return monthly_payment
+    
+    async def _generate_recommendations(self,
+                                     property_data: Dict,
+                                     structure_analysis: Dict,
+                                     regulation_info: Dict,
+                                     development_potential: Dict,
+                                     energy_analysis: Dict,
+                                     cost_estimation: Dict,
+                                     client_preferences: Optional[Dict] = None) -> List[Dict]:
+        """Genererer prioriterte anbefalinger basert på all analysert data"""
+        logger.info("Genererer anbefalinger")
+        
+        try:
+            # Bruk optimal scenario fra utviklingspotensiale hvis det eksisterer
+            optimal_scenario = development_potential.get("optimal_scenario", {})
+            
+            if optimal_scenario and "actions" in optimal_scenario:
+                recommendations = []
+                
+                for i, action in enumerate(optimal_scenario["actions"]):
+                    # Konverter handling til anbefaling
+                    recommendation = self._convert_action_to_recommendation(action, i+1)
+                    recommendations.append(recommendation)
+                
+                # Legg til standard anbefalinger
+                recommendations.extend(self._generate_standard_recommendations(
+                    property_data,
+                    structure_analysis,
+                    regulation_info,
+                    energy_analysis,
+                    cost_estimation
+                ))
+                
+                return recommendations[:5]  # Begrens til 5 anbefalinger
+            else:
+                # Generer anbefalinger fra bunnen av
+                return self._generate_recommendations_from_scratch(
+                    property_data,
+                    structure_analysis,
+                    regulation_info,
+                    development_potential,
+                    energy_analysis,
+                    cost_estimation,
+                    client_preferences
+                )
+        
+        except Exception as e:
+            logger.error(f"Feil ved generering av anbefalinger: {str(e)}")
+            return [{
+                "title": "Teknisk feil ved anbefalingsgenerering",
+                "description": "Det oppstod en feil ved generering av anbefalinger.",
+                "cost": None,
+                "benefit": None,
+                "roi": None,
+                "timeline": None,
+                "requirements": ["Kontakt kundeservice for assistanse"],
+                "next_steps": ["Kontakt kundeservice"]
+            }]
+    
+    def _convert_action_to_recommendation(self, action: Dict, priority: int) -> Dict:
+        """Konverterer en handling fra optimalt scenario til en anbefaling"""
+        # Standardverdier
+        recommendation = {
+            "title": action.get("description", "Anbefalt tiltak"),
+            "description": f"Prioritet {priority}: " + action.get("description", "Anbefalt tiltak"),
+            "cost": action.get("estimated_cost", 0),
+            "benefit": None,
+            "roi": None,
+            "timeline": "3-6 måneder",
+            "requirements": [],
+            "next_steps": []
+        }
+        
+        # Legg til spesifikk informasjon basert på handlingstype
+        action_type = action.get("type", "unknown")
+        
+        if action_type in ["basement_conversion", "attic_conversion", "main_floor_division"]:
+            # Utleietiltak
+            recommendation["benefit"] = f"Månedlig leieinntekt på kr {action.get('estimated_monthly_rent', 0):.0f}"
+            recommendation["roi"] = f"Tilbakebetalingstid: {action.get('roi_years', 0):.1f} år"
+            recommendation["timeline"] = "6-12 måneder"
+            recommendation["requirements"] = action.get("requirements", [])
+            recommendation["next_steps"] = [
+                "Kontakt arkitekt for tegninger",
+                "Søk kommunen om byggetillatelse",
+                "Innhent tilbud fra håndverkere"
+            ]
+        
+        elif action_type in ["additional_floor", "extension", "roof_terrace"]:
+            # Utvidelsestiltak
+            recommendation["benefit"] = f"Verdiøkning på ca. kr {action.get('value_increase', 0):.0f}"
+            recommendation["roi"] = f"ROI: {action.get('roi_percentage', 0):.1f}%"
+            recommendation["timeline"] = "6-18 måneder"
+            recommendation["requirements"] = action.get("requirements", [])
+            recommendation["next_steps"] = [
+                "Kontakt arkitekt for tegninger",
+                "Søk kommunen om byggetillatelse",
+                "Innhent tilbud fra entreprenører"
+            ]
+        
+        elif action_type in ["electrical", "bathroom", "kitchen", "windows", "roof", "energy_efficiency"]:
+            # Renoveringstiltak
+            recommendation["benefit"] = f"Verdiøkning på ca. kr {action.get('value_increase', 0):.0f}"
+            recommendation["roi"] = f"ROI: {action.get('roi_percentage', 0):.1f}%"
+            recommendation["timeline"] = "2-3 måneder"
+            recommendation["next_steps"] = [
+                "Innhent tilbud fra håndverkere",
+                "Prioriter arbeidet i henhold til anbefalt rekkefølge",
+                "Sjekk muligheter for Enova-støtte"
+            ]
+        
+        return recommendation
+    
+    def _generate_standard_recommendations(self,
+                                        property_data: Dict,
+                                        structure_analysis: Dict,
+                                        regulation_info: Dict,
+                                        energy_analysis: Dict,
+                                        cost_estimation: Dict) -> List[Dict]:
+        """Genererer standardanbefalinger basert på data"""
+        recommendations = []
+        
+        # Energieffektiviseringsanbefaling
+        if energy_analysis:
+            if energy_analysis.get("current_rating", "") in ["E", "F", "G"] and energy_analysis.get("improvement_measures", []):
+                top_energy_measure = energy_analysis["improvement_measures"][0]
+                
+                recommendations.append({
+                    "title": "Energieffektivisering",
+                    "description": f"Oppgrader energiklassifiseringen fra {energy_analysis.get('current_rating', '')} til {energy_analysis.get('potential_rating', '')}",
+                    "cost": top_energy_measure.get("cost", 0),
+                    "benefit": f"Årlig besparelse på ca. kr {energy_analysis.get('annual_cost_saving', 0):.0f}",
+                    "roi": f"Tilbakebetalingstid: {top_energy_measure.get('roi_years', 0):.1f} år",
+                    "timeline": "2-4 måneder",
+                    "requirements": ["Profesjonell installasjon for Enova-støtte"],
+                    "next_steps": [
+                        "Innhent tilbud fra leverandør",
+                        "Søk Enova-støtte",
+                        "Planlegg installasjon"
+                    ]
+                })
+        
+        # ROI-beregninger
+        roi_analysis = cost_estimation.get("roi_analysis", {})
+        if roi_analysis.get("best_scenario"):
+            best_scenario = roi_analysis["best_scenario"]
+            
+            recommendations.append({
+                "title": best_scenario.get("name", "Beste økonomiske scenario"),
+                "description": f"Dette scenarioet gir best avkastning på investeringen med {best_scenario.get('roi_percentage', 0):.1f}% ROI",
+                "cost": best_scenario.get("cost", 0),
+                "benefit": f"Årlig fordel på ca. kr {best_scenario.get('annual_benefit', 0):.0f}",
+                "roi": f"Tilbakebetalingstid: {best_scenario.get('payback_years', 0):.1f} år",
+                "timeline": "6-12 måneder",
+                "requirements": [],
+                "next_steps": [
+                    "Utarbeid detaljert prosjektplan",
+                    "Innhent flere pristilbud",
+                    "Vurder finansieringsalternativer"
+                ]
+            })
+        
+        # Finansieringsanbefaling
+        funding_options = cost_estimation.get("funding_options", [])
+        if funding_options:
+            best_funding = min(funding_options, key=lambda x: x.get("monthly_payment", float('inf')) if x.get("type") != "enova" else float('inf'))
+            
+            if best_funding.get("type") != "enova":
+                recommendations.append({
+                    "title": f"Finansiering via {best_funding.get('name', 'lån')}",
+                    "description": f"Optimal finansieringsløsning: {best_funding.get('description', '')}",
+                    "cost": f"Månedlig betaling: kr {best_funding.get('monthly_payment', 0):.0f}",
+                    "benefit": "Realisere verdiskapende prosjekter",
+                    "roi": None,
+                    "timeline": "1-2 måneder",
+                    "requirements": best_funding.get("requirements", []),
+                    "next_steps": [
+                        "Kontakt bank for lånetilbud",
+                        "Sammenlign betingelser fra flere banker",
+                        "Samle nødvendig dokumentasjon"
+                    ]
+                })
+        
+        return recommendations
+    
+    def _generate_recommendations_from_scratch(self,
+                                            property_data: Dict,
+                                            structure_analysis: Dict,
+                                            regulation_info: Dict,
+                                            development_potential: Dict,
+                                            energy_analysis: Dict,
+                                            cost_estimation: Dict,
+                                            client_preferences: Optional[Dict] = None) -> List[Dict]:
+        """Genererer anbefalinger fra bunnen av hvis optimalt scenario mangler"""
+        # Dette er en fallback-metode hvis utviklingspotensiale mangler optimalt scenario
+        recommendations = []
+        
+        # Sjekk etter utleiemuligheter
+        rental_options = development_potential.get("rental_units", [])
+        if rental_options:
+            top_rental = rental_options[0]
+            recommendations.append({
+                "title": top_rental.get("description", "Utleieenhet"),
+                "description": f"Utleiepotensial med månedlig inntekt på kr {top_rental.get('estimated_monthly_rent', 0):.0f}",
+                "cost": top_rental.get("estimated_cost", 0),
+                "benefit": f"Årlig leieinntekt på kr {top_rental.get('estimated_monthly_rent', 0) * 12:.0f}",
+                "roi": f"Tilbakebetalingstid: {top_rental.get('roi_years', 0):.1f} år",
+                "timeline": "6-12 måneder",
+                "requirements": top_rental.get("requirements", []),
+                "next_steps": [
+                    "Kontakt arkitekt for tegninger",
+                    "Søk kommunen om byggetillatelse",
+                    "Innhent tilbud fra håndverkere"
+                ]
+            })
+        
+        # Sjekk etter utvidelsesmuligheter
+        expansion_options = development_potential.get("expansion_possibilities", [])
+        if expansion_options:
+            top_expansion = expansion_options[0]
+            recommendations.append({
+                "title": top_expansion.get("description", "Utvidelse"),
+                "description": f"Utvide boligareal med {top_expansion.get('area_m2', 0):.1f} m²",
+                "cost": top_expansion.get("estimated_cost", 0),
+                "benefit": f"Verdiøkning på ca. kr {top_expansion.get('value_increase', 0):.0f}",
+                "roi": f"ROI: {top_expansion.get('roi_percentage', 0):.1f}%",
+                "timeline": "6-18 måneder",
+                "requirements": top_expansion.get("requirements", []),
+                "next_steps": [
+                    "Kontakt arkitekt for tegninger",
+                    "Søk kommunen om byggetillatelse",
+                    "Innhent tilbud fra entreprenører"
+                ]
+            })
+        
+        # Sjekk etter renoveringsbehov
+        renovation_needs = development_potential.get("renovation_needs", [])
+        if renovation_needs:
+            high_priority = [r for r in renovation_needs if r.get("priority") == "high"]
+            
+            if high_priority:
+                top_renovation = high_priority[0]
+                recommendations.append({
+                    "title": top_renovation.get("description", "Renovering"),
+                    "description": f"Høyprioritert renovering: {top_renovation.get('description', '')}",
+                    "cost": top_renovation.get("estimated_cost", 0),
+                    "benefit": f"Verdiøkning på ca. kr {top_renovation.get('value_increase', 0):.0f}",
+                    "roi": f"ROI: {top_renovation.get('roi_percentage', 0):.1f}%",
+                    "timeline": "2-4 måneder",
+                    "requirements": [],
+                    "next_steps": [
+                        "Innhent tilbud fra håndverkere",
+                        "Planlegg arbeidet i riktig rekkefølge",
+                        "Sjekk muligheter for finansiering"
+                    ]
+                })
+        
+        # Sjekk etter energieffektiviseringsmuligheter
+        if energy_analysis and energy_analysis.get("improvement_measures", []):
+            top_energy_measure = energy_analysis["improvement_measures"][0]
+            
+            recommendations.append({
+                "title": "Energieffektivisering",
+                "description": top_energy_measure.get("description", "Energitiltak"),
+                "cost": top_energy_measure.get("cost", 0),
+                "benefit": f"Årlig besparelse på ca. kr {energy_analysis.get('annual_cost_saving', 0):.0f}",
+                "roi": f"Tilbakebetalingstid: {top_energy_measure.get('roi_years', 0):.1f} år",
+                "timeline": "2-4 måneder",
+                "requirements": ["Profesjonell installasjon for Enova-støtte"],
+                "next_steps": [
+                    "Innhent tilbud fra leverandør",
+                    "Søk Enova-støtte",
+                    "Planlegg installasjon"
+                ]
+            })
+        
+        # Legg til generell anbefaling hvis listen er tom
+        if not recommendations:
+            recommendations.append({
+                "title": "Vedlikehold av eiendommen",
+                "description": "Jevnlig vedlikehold anbefales for å opprettholde eiendommens verdi",
+                "cost": None,
+                "benefit": "Langsiktig verdibevaring",
+                "roi": None,
+                "timeline": "Løpende",
+                "requirements": [],
+                "next_steps": [
+                    "Sett opp en vedlikeholdsplan",
+                    "Utfør regelmessig inspeksjon av tak, vinduer og fasade",
+                    "Sett av midler til årlig vedlikehold"
+                ]
+            })
+        
+        return recommendations[:5]  # Begrens til 5 anbefalinger
+    
+    def _log_error(self, message: str):
+        """Logger feilmelding"""
+        logger.error(message)
