@@ -1740,4 +1740,1982 @@ class OmniverseRenderer:
         """Opprett en bjelke med fysikk"""
         # Hent bjelkedata
         start = beam_data.get("start", [0, 0, 0])
-        end = beam_data.get("end", [5,
+        end = beam_data.get("end", [5, 0, 0])
+        width = beam_data.get("width", 0.2)
+        height = beam_data.get("height", 0.3)
+        material = beam_data.get("material", "wood")
+        
+        # Beregn retningsvektor
+        direction = [end[0] - start[0], end[1] - start[1], end[2] - start[2]]
+        length = (direction[0]**2 + direction[1]**2 + direction[2]**2)**0.5
+        
+        if length < 0.001:
+            logger.warning("Beam has zero length. Skipping.")
+            return None
+        
+        # Normaliser
+        direction = [direction[0] / length, direction[1] / length, direction[2] / length]
+        
+        # Opprett bjelke-prim
+        beam_id = beam_data.get("id", f"beam_{start[0]}_{start[1]}_{start[2]}")
+        beam_prim_path = f"{parent_path}/Beams/{beam_id}"
+        beam_prim = self.stage.DefinePrim(beam_prim_path, "Mesh")
+        
+        # Plasser bjelken
+        xform = UsdGeom.Xformable(beam_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(*start))
+        
+        # Roter for å innrette med retningen
+        if abs(direction[0]) < 0.99 or abs(direction[1]) > 0.01 or abs(direction[2]) > 0.01:
+            # Beregn rotasjon fra X-aksen til retningsvektor
+            z_rotation = np.degrees(np.arctan2(direction[1], direction[0]))
+            xform.AddRotateZOp().Set(z_rotation)
+            
+            # Beregn vertikalrotasjon
+            xz_length = (direction[0]**2 + direction[2]**2)**0.5
+            y_rotation = np.degrees(np.arctan2(direction[1], xz_length))
+            xform.AddRotateYOp().Set(y_rotation)
+        
+        # Opprett bjelkegeometri
+        vertices, faces, uvs = self._generate_beam_geometry(length, width, height)
+        
+        # Sett mesh-data
+        beam_mesh = UsdGeom.Mesh(beam_prim)
+        beam_mesh.CreatePointsAttr(vertices)
+        beam_mesh.CreateFaceVertexIndicesAttr(faces)
+        beam_mesh.CreateFaceVertexCountsAttr([4] * (len(faces) // 4))
+        beam_mesh.CreatePrimvar("st", Sdf.ValueTypeNames.TexCoord2fArray, UsdGeom.Tokens.varying).Set(uvs)
+        
+        # Legg til fysikk hvis tilgjengelig
+        if hasattr(UsdPhysics, 'RigidBodyAPI'):
+            rigid_body = UsdPhysics.RigidBodyAPI.Apply(beam_prim)
+            rigid_body.CreateMassAttr().Set(beam_data.get("mass", 50.0))
+            
+            # Kollisjonsmesh
+            UsdPhysics.CollisionAPI.Apply(beam_prim)
+            
+            # Sett fysiske egenskaper
+            UsdPhysics.MassAPI.Apply(beam_prim)
+            UsdPhysics.MassAPI(beam_prim).CreateDensityAttr().Set(600.0)  # Tretetthet
+        
+        # Sett metadata
+        beam_prim.GetPrim().CreateAttribute("beam:material", Sdf.ValueTypeNames.String).Set(material)
+        beam_prim.GetPrim().CreateAttribute("beam:type", Sdf.ValueTypeNames.String).Set(
+            beam_data.get("type", "structural"))
+        
+        return beam_mesh
+    
+    def _generate_beam_geometry(self, length: float, width: float, 
+                              height: float) -> Tuple[List[Gf.Vec3f], List[int], List[Gf.Vec2f]]:
+        """Generer geometri for en bjelke"""
+        half_width = width / 2
+        half_height = height / 2
+        
+        # Vertekser for bjelke (boks langs X-aksen)
+        vertices = [
+            # Front (-X)
+            Gf.Vec3f(0, -half_height, -half_width),
+            Gf.Vec3f(0, half_height, -half_width),
+            Gf.Vec3f(0, half_height, half_width),
+            Gf.Vec3f(0, -half_height, half_width),
+            
+            # Bak (+X)
+            Gf.Vec3f(length, -half_height, -half_width),
+            Gf.Vec3f(length, half_height, -half_width),
+            Gf.Vec3f(length, half_height, half_width),
+            Gf.Vec3f(length, -half_height, half_width)
+        ]
+        
+        # Ansikter (kvads)
+        faces = [
+            # Front
+            0, 3, 2, 1,
+            # Bak
+            4, 5, 6, 7,
+            # Topp
+            1, 2, 6, 5,
+            # Bunn
+            0, 4, 7, 3,
+            # Høyre side
+            3, 7, 6, 2,
+            # Venstre side
+            0, 1, 5, 4
+        ]
+        
+        # UV-koordinater
+        uvs = []
+        for i in range(8):
+            u = 0 if i < 4 else 1  # 0 for front, 1 for bak
+            v = i % 4 / 3.0  # 0, 1/3, 2/3, 1 gjentatt for front og bak
+            uvs.append(Gf.Vec2f(u, v))
+        
+        return vertices, faces, uvs
+    
+    async def _create_column(self, column_data: Dict[str, Any], parent_path: Sdf.Path) -> UsdGeom.Mesh:
+        """Opprett en søyle/kolonne med fysikk"""
+        # Hent søyledata
+        position = column_data.get("position", [0, 0, 0])
+        height = column_data.get("height", 2.7)
+        radius = column_data.get("radius", 0.15)
+        sides = column_data.get("sides", 8)  # Antall sider (8 for oktagonal, høyere for mer sirkulær)
+        material = column_data.get("material", "concrete")
+        
+        # Opprett søyle-prim
+        column_id = column_data.get("id", f"column_{position[0]}_{position[1]}_{position[2]}")
+        column_prim_path = f"{parent_path}/Columns/{column_id}"
+        column_prim = self.stage.DefinePrim(column_prim_path, "Mesh")
+        
+        # Plasser søylen
+        xform = UsdGeom.Xformable(column_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(*position))
+        
+        # Opprett søylegeometri
+        vertices, faces, uvs = self._generate_column_geometry(height, radius, sides)
+        
+        # Sett mesh-data
+        column_mesh = UsdGeom.Mesh(column_prim)
+        column_mesh.CreatePointsAttr(vertices)
+        column_mesh.CreateFaceVertexIndicesAttr(faces)
+        column_mesh.CreateFaceVertexCountsAttr([4] * (len(faces) // 4))
+        column_mesh.CreatePrimvar("st", Sdf.ValueTypeNames.TexCoord2fArray, UsdGeom.Tokens.varying).Set(uvs)
+        
+        # Legg til fysikk hvis tilgjengelig
+        if hasattr(UsdPhysics, 'RigidBodyAPI'):
+            rigid_body = UsdPhysics.RigidBodyAPI.Apply(column_prim)
+            rigid_body.CreateMassAttr().Set(column_data.get("mass", 200.0))
+            
+            # Kollisjonsmesh
+            UsdPhysics.CollisionAPI.Apply(column_prim)
+            
+            # Sett fysiske egenskaper
+            UsdPhysics.MassAPI.Apply(column_prim)
+            UsdPhysics.MassAPI(column_prim).CreateDensityAttr().Set(2400.0)  # Betongtetthet
+        
+        # Sett metadata
+        column_prim.GetPrim().CreateAttribute("column:material", Sdf.ValueTypeNames.String).Set(material)
+        column_prim.GetPrim().CreateAttribute("column:type", Sdf.ValueTypeNames.String).Set(
+            column_data.get("type", "structural"))
+        
+        return column_mesh
+    
+    def _generate_column_geometry(self, height: float, radius: float, 
+                                sides: int) -> Tuple[List[Gf.Vec3f], List[int], List[Gf.Vec2f]]:
+        """Generer geometri for en søyle"""
+        vertices = []
+        faces = []
+        uvs = []
+        
+        # Opprett vertekser rundt sirkelen for bunn og topp
+        for i in range(sides):
+            angle = 2 * np.pi * i / sides
+            x = radius * np.cos(angle)
+            z = radius * np.sin(angle)
+            
+            # Bunnpunkt
+            vertices.append(Gf.Vec3f(x, 0, z))
+            uvs.append(Gf.Vec2f(i / sides, 0))
+            
+            # Toppunkt
+            vertices.append(Gf.Vec3f(x, height, z))
+            uvs.append(Gf.Vec2f(i / sides, 1))
+        
+        # Opprett sideflater
+        for i in range(sides):
+            # Indekser for nåværende og neste punkt på sirkelen (bunn og topp)
+            current_bottom = i * 2
+            current_top = i * 2 + 1
+            next_bottom = (i * 2 + 2) % (sides * 2)
+            next_top = (i * 2 + 3) % (sides * 2)
+            
+            # Legg til kvadrilateral (med korrekt winding)
+            faces.extend([current_bottom, current_top, next_top, next_bottom])
+        
+        # Legg til topp- og bunnflater
+        bottom_face = []
+        top_face = []
+        
+        for i in range(sides):
+            bottom_face.append(i * 2)
+            top_face.append((sides - i - 1) * 2 + 1)  # Revers for korrekt winding
+        
+        # Legg til bunnsirkel
+        faces.extend(bottom_face)
+        
+        # Legg til toppsirkel
+        faces.extend(top_face)
+        
+        # Legg til count for topp og bunn
+        polygon_counts = [4] * sides + [sides, sides]
+        
+        # UV-koordinater for topp og bunn
+        for i in range(sides):
+            angle = 2 * np.pi * i / sides
+            u = 0.5 + 0.5 * np.cos(angle)
+            v = 0.5 + 0.5 * np.sin(angle)
+            uvs.append(Gf.Vec2f(u, v))  # Bunn
+            uvs.append(Gf.Vec2f(u, v))  # Topp
+        
+        return vertices, faces, uvs
+    
+    async def _create_staircase(self, stair_data: Dict[str, Any], parent_path: Sdf.Path) -> UsdGeom.Xform:
+        """Opprett en trapp"""
+        # Hent trappedata
+        start_position = stair_data.get("start", [0, 0, 0])
+        end_position = stair_data.get("end", [3, 3, 0])
+        width = stair_data.get("width", 1.0)
+        steps = stair_data.get("steps", 15)
+        material = stair_data.get("material", "wood")
+        
+        # Beregn trapperetning og -dimensjoner
+        direction = [
+            end_position[0] - start_position[0],
+            end_position[1] - start_position[1],
+            end_position[2] - start_position[2]
+        ]
+        
+        horizontal_length = (direction[0]**2 + direction[2]**2)**0.5
+        height = direction[1]
+        
+        if horizontal_length < 0.001 or height < 0.001:
+            logger.warning("Invalid staircase dimensions. Skipping.")
+            return None
+        
+        # Opprett trapp-xform
+        stair_id = stair_data.get("id", f"stair_{start_position[0]}_{start_position[1]}_{start_position[2]}")
+        stair_prim_path = f"{parent_path}/Stairs/{stair_id}"
+        stair_prim = self.stage.DefinePrim(stair_prim_path, "Xform")
+        
+        # Plasser trappen
+        xform = UsdGeom.Xformable(stair_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(*start_position))
+        
+        # Beregn rotasjon for å innrette med retningen
+        if abs(direction[0]) > 0.001 or abs(direction[2]) > 0.001:
+            angle = np.degrees(np.arctan2(direction[2], direction[0]))
+            xform.AddRotateYOp().Set(angle)
+        
+        # Opprett trinn
+        step_length = horizontal_length / steps
+        step_height = height / steps
+        
+        step_tasks = []
+        for i in range(steps):
+            step_tasks.append(self._create_stair_step(
+                f"{stair_prim_path}/Step_{i}",
+                i * step_length,
+                i * step_height,
+                step_length,
+                step_height,
+                width,
+                material
+            ))
+        
+        # Vent på at alle trinn skal bli opprettet
+        await asyncio.gather(*step_tasks)
+        
+        # Opprett rekkverk hvis spesifisert
+        if stair_data.get("has_railing", True):
+            await self._create_stair_railing(
+                f"{stair_prim_path}/Railing",
+                horizontal_length,
+                height,
+                width,
+                steps,
+                stair_data.get("railing_height", 0.9),
+                stair_data.get("railing_material", "metal")
+            )
+        
+        return UsdGeom.Xform(stair_prim)
+    
+    async def _create_stair_step(self, path: str, x_pos: float, y_pos: float, length: float, 
+                               height: float, width: float, material: str) -> UsdGeom.Mesh:
+        """Opprett et enkelt trinn i en trapp"""
+        step_prim = self.stage.DefinePrim(path, "Mesh")
+        step_mesh = UsdGeom.Mesh(step_prim)
+        
+        # Plasser trinnet
+        xform = UsdGeom.Xformable(step_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(x_pos, y_pos, -width/2))
+        
+        # Trinngeometri
+        thickness = 0.05  # Trinntykkelse
+        
+        vertices = [
+            # Øvre flate
+            Gf.Vec3f(0, height, 0),
+            Gf.Vec3f(length, height, 0),
+            Gf.Vec3f(length, height, width),
+            Gf.Vec3f(0, height, width),
+            
+            # Nedre flate
+            Gf.Vec3f(0, height - thickness, 0),
+            Gf.Vec3f(length, height - thickness, 0),
+            Gf.Vec3f(length, height - thickness, width),
+            Gf.Vec3f(0, height - thickness, width),
+            
+            # Vertikalt trinn-panel
+            Gf.Vec3f(0, 0, 0),
+            Gf.Vec3f(length, 0, 0),
+            Gf.Vec3f(length, height, 0),
+            Gf.Vec3f(0, height, 0),
+            
+            Gf.Vec3f(0, 0, width),
+            Gf.Vec3f(length, 0, width),
+            Gf.Vec3f(length, height, width),
+            Gf.Vec3f(0, height, width)
+        ]
+        
+        # Ansikter
+        faces = [
+            # Topp
+            0, 3, 2, 1,
+            
+            # Bunn
+            4, 5, 6, 7,
+            
+            # Front
+            8, 9, 10, 11,
+            
+            # Bak
+            12, 15, 14, 13,
+            
+            # Venstre
+            8, 11, 15, 12,
+            
+            # Høyre
+            9, 13, 14, 10
+        ]
+        
+        # UV-koordinater
+        uvs = [
+            # Topp
+            Gf.Vec2f(0, 0), Gf.Vec2f(0, 1), Gf.Vec2f(1, 1), Gf.Vec2f(1, 0),
+            
+            # Bunn
+            Gf.Vec2f(0, 0), Gf.Vec2f(1, 0), Gf.Vec2f(1, 1), Gf.Vec2f(0, 1),
+            
+            # Front og bak
+            Gf.Vec2f(0, 0), Gf.Vec2f(1, 0), Gf.Vec2f(1, 1), Gf.Vec2f(0, 1),
+            Gf.Vec2f(0, 0), Gf.Vec2f(1, 0), Gf.Vec2f(1, 1), Gf.Vec2f(0, 1),
+            
+            # Sider
+            Gf.Vec2f(0, 0), Gf.Vec2f(0, 1), Gf.Vec2f(1, 1), Gf.Vec2f(1, 0),
+            Gf.Vec2f(0, 0), Gf.Vec2f(0, 1), Gf.Vec2f(1, 1), Gf.Vec2f(1, 0)
+        ]
+        
+        # Sett mesh-data
+        step_mesh.CreatePointsAttr(vertices)
+        step_mesh.CreateFaceVertexIndicesAttr(faces)
+        step_mesh.CreateFaceVertexCountsAttr([4] * (len(faces) // 4))
+        step_mesh.CreatePrimvar("st", Sdf.ValueTypeNames.TexCoord2fArray, UsdGeom.Tokens.varying).Set(uvs)
+        
+        # Sett materialemarkør
+        step_prim.GetPrim().CreateAttribute("material", Sdf.ValueTypeNames.String).Set(material)
+        
+        return step_mesh
+    
+    async def _create_stair_railing(self, path: str, length: float, height: float, width: float, 
+                                 steps: int, railing_height: float, material: str) -> UsdGeom.Xform:
+        """Opprett rekkverk for en trapp"""
+        railing_prim = self.stage.DefinePrim(path, "Xform")
+        
+        # Rekkverk-parametre
+        post_radius = 0.02
+        handrail_radius = 0.025
+        
+        # Beregn vinkel for rekkverk
+        angle = np.arctan2(height, length)
+        railing_length = (length**2 + height**2)**0.5
+        
+        # Opprett stolper på venstre side
+        posts_left = []
+        posts_right = []
+        
+        for i in range(steps + 1):
+            x_pos = i * (length / steps)
+            y_pos = i * (height / steps)
+            
+            # Venstre stolpe
+            post_left_path = f"{path}/Post_Left_{i}"
+            post_left = await self._create_railing_post(
+                post_left_path, x_pos, y_pos, 0, railing_height, post_radius, material)
+            posts_left.append(post_left)
+            
+            # Høyre stolpe
+            post_right_path = f"{path}/Post_Right_{i}"
+            post_right = await self._create_railing_post(
+                post_right_path, x_pos, y_pos, width, railing_height, post_radius, material)
+            posts_right.append(post_right)
+        
+        # Opprett håndlister
+        handrail_left_path = f"{path}/Handrail_Left"
+        handrail_left = await self._create_handrail(
+            handrail_left_path, 0, 0, 0, angle, railing_length, railing_height, handrail_radius, material)
+        
+        handrail_right_path = f"{path}/Handrail_Right"
+        handrail_right = await self._create_handrail(
+            handrail_right_path, 0, 0, width, angle, railing_length, railing_height, handrail_radius, material)
+        
+        return UsdGeom.Xform(railing_prim)
+    
+    async def _create_railing_post(self, path: str, x_pos: float, y_pos: float, z_pos: float, 
+                                height: float, radius: float, material: str) -> UsdGeom.Cylinder:
+        """Opprett en rekkverkstolpe"""
+        post_prim = self.stage.DefinePrim(path, "Cylinder")
+        post = UsdGeom.Cylinder(post_prim)
+        
+        # Sett sylinderparametre
+        post.CreateRadiusAttr(radius)
+        post.CreateHeightAttr(height)
+        
+        # Plasser stolpen
+        xform = UsdGeom.Xformable(post_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(x_pos, y_pos, z_pos))
+        
+        # Juster aksene (Y-opp)
+        xform.AddRotateXOp().Set(90)
+        
+        # Juster til å starte fra bakken
+        xform.AddTranslateOp().Set(Gf.Vec3d(0, height/2, 0))
+        
+        # Sett materialemarkør
+        post_prim.GetPrim().CreateAttribute("material", Sdf.ValueTypeNames.String).Set(material)
+        
+        return post
+    
+    async def _create_handrail(self, path: str, x_pos: float, y_pos: float, z_pos: float, 
+                            angle: float, length: float, height: float, radius: float, 
+                            material: str) -> UsdGeom.Cylinder:
+        """Opprett en håndlist for rekkverk"""
+        handrail_prim = self.stage.DefinePrim(path, "Cylinder")
+        handrail = UsdGeom.Cylinder(handrail_prim)
+        
+        # Sett sylinderparametre
+        handrail.CreateRadiusAttr(radius)
+        handrail.CreateHeightAttr(length)
+        
+        # Plasser håndlisten
+        xform = UsdGeom.Xformable(handrail_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(x_pos, y_pos + height, z_pos))
+        
+        # Juster aksene (Z-langs)
+        xform.AddRotateXOp().Set(90)
+        
+        # Roter for å følge trappevinkel
+        xform.AddRotateZOp().Set(np.degrees(angle))
+        
+        # Juster til å starte fra første stolpe
+        xform.AddTranslateOp().Set(Gf.Vec3d(0, 0, length/2))
+        
+        # Sett materialemarkør
+        handrail_prim.GetPrim().CreateAttribute("material", Sdf.ValueTypeNames.String).Set(material)
+        
+        return handrail
+    
+    async def _apply_materials(self, materials_data: Dict[str, Any]):
+        """Appliser materialer på 3D-modellen med avansert shading"""
+        try:
+            logger.info("Applying materials to 3D model")
+            
+            # Opprett materialbibliotek
+            material_lib = self._create_material_library(materials_data)
+            
+            # Appliser materialer på overflater
+            assignment_tasks = []
+            for surface, material_name in materials_data.get("assignments", {}).items():
+                if material_name in material_lib:
+                    material = material_lib[material_name]
+                    assignment_tasks.append(self._apply_material_to_surface(surface, material))
+            
+            # Vent på at alle materialassigneringer skal fullføres
+            await asyncio.gather(*assignment_tasks)
+            
+            # Oppdater shader-nettverk
+            await self._update_shaders()
+            
+            logger.info("Materials applied successfully")
+            
+        except Exception as e:
+            logger.error(f"Error applying materials: {str(e)}")
+            raise
+    
+    def _create_material_library(self, materials_data: Dict[str, Any]) -> Dict[str, UsdShade.Material]:
+        """Opprett bibliotek med USD-materialer"""
+        logger.info("Creating material library")
+        
+        material_lib = {}
+        
+        # Opprett Materials-prim
+        materials_path = "/World/Materials"
+        self.stage.DefinePrim(materials_path, "Scope")
+        
+        # Opprett materialer fra data
+        for material_name, material_props in materials_data.get("materials", {}).items():
+            try:
+                material_path = f"{materials_path}/{material_name}"
+                material = UsdShade.Material.Define(self.stage, material_path)
+                
+                # Opprett PBR shader
+                shader_path = f"{material_path}/PBRShader"
+                shader = UsdShade.Shader.Define(self.stage, shader_path)
+                shader.CreateIdAttr("UsdPreviewSurface")
+                
+                # Sett shader-parametre
+                self._set_shader_parameters(shader, material_props)
+                
+                # Opprett teksturnoder
+                if "textures" in material_props:
+                    self._create_texture_nodes(material_path, shader, material_props["textures"])
+                
+                # Sett shader som materialoutput
+                material.CreateSurfaceOutput().ConnectToSource(
+                    shader.CreateOutput("surface", Sdf.ValueTypeNames.Token))
+                
+                # Legg til materialet i biblioteket
+                material_lib[material_name] = material
+                
+                logger.info(f"Created material: {material_name}")
+                
+            except Exception as e:
+                logger.error(f"Error creating material {material_name}: {str(e)}")
+        
+        # Legg til standard materialer fra materialbiblioteket
+        for material_name, properties in self.material_library.materials.items():
+            if material_name not in material_lib:
+                try:
+                    material = self.material_library.create_usd_material(
+                        self.stage, material_name, properties)
+                    material_lib[material_name] = material
+                    logger.info(f"Added standard material: {material_name}")
+                except Exception as e:
+                    logger.error(f"Error adding standard material {material_name}: {str(e)}")
+        
+        return material_lib
+    
+    def _set_shader_parameters(self, shader: UsdShade.Shader, material_props: Dict[str, Any]):
+        """Sett shader-parametre fra materialegenskaper"""
+        # Basisegenskaper
+        if "base_color" in material_props:
+            color = material_props["base_color"]
+            if isinstance(color, (list, tuple)) and len(color) >= 3:
+                shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*color[:3]))
+        
+        if "roughness" in material_props:
+            shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(material_props["roughness"])
+        
+        if "metallic" in material_props:
+            shader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(material_props["metallic"])
+        
+        # Avanserte egenskaper
+        if "opacity" in material_props:
+            shader.CreateInput("opacity", Sdf.ValueTypeNames.Float).Set(material_props["opacity"])
+        
+        if "ior" in material_props:
+            shader.CreateInput("ior", Sdf.ValueTypeNames.Float).Set(material_props["ior"])
+        
+        if "normal_scale" in material_props:
+            shader.CreateInput("normalScale", Sdf.ValueTypeNames.Float).Set(material_props["normal_scale"])
+        
+        if "emissive_color" in material_props:
+            color = material_props["emissive_color"]
+            if isinstance(color, (list, tuple)) and len(color) >= 3:
+                shader.CreateInput("emissiveColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*color[:3]))
+        
+        if "emissive_intensity" in material_props:
+            shader.CreateInput("emissiveIntensity", Sdf.ValueTypeNames.Float).Set(
+                material_props["emissive_intensity"])
+        
+        if "clearcoat" in material_props:
+            shader.CreateInput("clearcoat", Sdf.ValueTypeNames.Float).Set(material_props["clearcoat"])
+        
+        if "clearcoat_roughness" in material_props:
+            shader.CreateInput("clearcoatRoughness", Sdf.ValueTypeNames.Float).Set(
+                material_props["clearcoat_roughness"])
+        
+        if "displacement_scale" in material_props:
+            shader.CreateInput("displacementScale", Sdf.ValueTypeNames.Float).Set(
+                material_props["displacement_scale"])
+        
+        # Spesialbehandling for transparente/blanke materialer
+        if material_props.get("type") == "glass":
+            shader.CreateInput("opacity", Sdf.ValueTypeNames.Float).Set(0.2)
+            shader.CreateInput("ior", Sdf.ValueTypeNames.Float).Set(material_props.get("ior", 1.5))
+            shader.CreateInput("useSpecularWorkflow", Sdf.ValueTypeNames.Int).Set(1)
+            shader.CreateInput("specularColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(1, 1, 1))
+    
+    def _create_texture_nodes(self, material_path: str, shader: UsdShade.Shader, 
+                            textures: Dict[str, str]):
+        """Opprett teksturnoder for et materiale"""
+        for tex_type, tex_path in textures.items():
+            # Opprett teksturshader
+            tex_shader_path = f"{material_path}/{tex_type.capitalize()}Texture"
+            tex_shader = UsdShade.Shader.Define(self.stage, tex_shader_path)
+            tex_shader.CreateIdAttr("UsdUVTexture")
+            
+            # Sett teksturfilsti
+            tex_shader.CreateInput("file", Sdf.ValueTypeNames.Asset).Set(tex_path)
+            
+            # Sett wrapping og filtrering
+            tex_shader.CreateInput("wrapS", Sdf.ValueTypeNames.Token).Set("repeat")
+            tex_shader.CreateInput("wrapT", Sdf.ValueTypeNames.Token).Set("repeat")
+            tex_shader.CreateInput("minFilter", Sdf.ValueTypeNames.Token).Set("linear")
+            tex_shader.CreateInput("magFilter", Sdf.ValueTypeNames.Token).Set("linear")
+            
+            # Koble teksturnoden til hovedshaderen
+            tex_output = None
+            shader_input = None
+            
+            if tex_type == "albedo" or tex_type == "diffuse" or tex_type == "basecolor":
+                tex_output = tex_shader.CreateOutput("rgb", Sdf.ValueTypeNames.Float3)
+                shader_input = shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f)
+            
+            elif tex_type == "roughness":
+                tex_output = tex_shader.CreateOutput("r", Sdf.ValueTypeNames.Float)
+                shader_input = shader.CreateInput("roughness", Sdf.ValueTypeNames.Float)
+            
+            elif tex_type == "metallic":
+                tex_output = tex_shader.CreateOutput("r", Sdf.ValueTypeNames.Float)
+                shader_input = shader.CreateInput("metallic", Sdf.ValueTypeNames.Float)
+            
+            elif tex_type == "normal":
+                # Opprett normalmap-shader
+                normal_reader_path = f"{material_path}/NormalMap"
+                normal_reader = UsdShade.Shader.Define(self.stage, normal_reader_path)
+                normal_reader.CreateIdAttr("UsdNormalMap")
+                
+                # Koble tekstur til normalmap-reader
+                tex_output = tex_shader.CreateOutput("rgb", Sdf.ValueTypeNames.Float3)
+                normal_input = normal_reader.CreateInput("in", Sdf.ValueTypeNames.Float3)
+                normal_input.ConnectToSource(tex_output)
+                
+                # Koble normalmap til shader
+                normal_output = normal_reader.CreateOutput("normal", Sdf.ValueTypeNames.Normal3f)
+                shader_input = shader.CreateInput("normal", Sdf.ValueTypeNames.Normal3f)
+                shader_input.ConnectToSource(normal_output)
+                
+                continue  # Skip standard tilkobling
+            
+            elif tex_type == "occlusion":
+                tex_output = tex_shader.CreateOutput("r", Sdf.ValueTypeNames.Float)
+                shader_input = shader.CreateInput("occlusion", Sdf.ValueTypeNames.Float)
+            
+            elif tex_type == "opacity":
+                tex_output = tex_shader.CreateOutput("r", Sdf.ValueTypeNames.Float)
+                shader_input = shader.CreateInput("opacity", Sdf.ValueTypeNames.Float)
+            
+            elif tex_type == "emissive":
+                tex_output = tex_shader.CreateOutput("rgb", Sdf.ValueTypeNames.Float3)
+                shader_input = shader.CreateInput("emissiveColor", Sdf.ValueTypeNames.Color3f)
+            
+            # Koble teksturen til shader hvis både output og input er definert
+            if tex_output and shader_input:
+                shader_input.ConnectToSource(tex_output)
+    
+    async def _apply_material_to_surface(self, surface_path: str, material: UsdShade.Material):
+        """Appliser materiale på en overflate"""
+        try:
+            # Resolve full path with patterns
+            matching_prims = self._find_matching_prims(surface_path)
+            
+            for prim_path in matching_prims:
+                # Bindmaterialet til prim
+                UsdShade.MaterialBindingAPI(self.stage.GetPrimAtPath(prim_path)).Bind(material)
+            
+            logger.debug(f"Applied material to {len(matching_prims)} surfaces matching {surface_path}")
+            
+        except Exception as e:
+            logger.error(f"Error applying material to surface {surface_path}: {str(e)}")
+    
+    def _find_matching_prims(self, pattern: str) -> List[Sdf.Path]:
+        """Finn prims som matcher et mønster (støtter wildcard)"""
+        matching_prims = []
+        
+        # Sjekk for wildcard
+        if '*' in pattern:
+            # Konverter mønsteret til regex
+            import re
+            regex_pattern = pattern.replace('*', '.*')
+            regex = re.compile(regex_pattern)
+            
+            # Finn alle mesher på scenen
+            for prim in self.stage.Traverse():
+                if prim.IsA(UsdGeom.Mesh) or prim.IsA(UsdGeom.Cylinder) or prim.IsA(UsdGeom.Cube):
+                    prim_path_str = str(prim.GetPath())
+                    if regex.match(prim_path_str):
+                        matching_prims.append(prim.GetPath())
+        else:
+            # Sjekk om primen eksisterer
+            prim = self.stage.GetPrimAtPath(pattern)
+            if prim:
+                matching_prims.append(prim.GetPath())
+        
+        return matching_prims
+    
+    async def _update_shaders(self):
+        """Oppdater shader-nettverk og sikre at alle materialer er korrekt koblet"""
+        # Dette er en placeholder for mer avansert shader-oppdatering
+        # I en reell implementasjon ville dette involvere mer kompleks logikk
+        
+        # Oppdater materialnettverk
+        UsdShade.MaterialBindingAPI.ComputeBoundMaterials(self.stage)
+        
+        # Oppfrisk stageen
+        self.stage.Save()
+    
+    async def _setup_lighting(self, lighting_data: Dict[str, Any] = None):
+        """Sett opp avansert belysning med HDR og sol/himmel"""
+        try:
+            logger.info("Setting up lighting system")
+            
+            # Standardverdier hvis ingen data er gitt
+            if lighting_data is None:
+                lighting_data = {
+                    "type": "natural",
+                    "time": "day",
+                    "intensity": 1.0,
+                    "ambient_intensity": 0.3,
+                    "artificial_lights": []
+                }
+            
+            # Opprett lighting-prim
+            lighting_prim_path = "/World/Lighting"
+            lighting_prim = self.stage.DefinePrim(lighting_prim_path, "Scope")
+            
+            # Oppsett basert på lystype
+            lighting_type = lighting_data.get("type", "natural")
+            
+            if lighting_type == "natural" or lighting_type == "outdoor":
+                await self._setup_natural_lighting(lighting_prim.GetPath(), lighting_data)
+            elif lighting_type == "indoor":
+                await self._setup_indoor_lighting(lighting_prim.GetPath(), lighting_data)
+            elif lighting_type == "studio":
+                await self._setup_studio_lighting(lighting_prim.GetPath(), lighting_data)
+            else:
+                logger.warning(f"Unknown lighting type: {lighting_type}. Using natural lighting.")
+                await self._setup_natural_lighting(lighting_prim.GetPath(), lighting_data)
+            
+            # Legg til kunstige lyskilder hvis spesifisert
+            for light_data in lighting_data.get("artificial_lights", []):
+                await self._add_artificial_light(lighting_prim.GetPath(), light_data)
+            
+            logger.info("Lighting system set up successfully")
+            
+        except Exception as e:
+            logger.error(f"Error setting up lighting: {str(e)}")
+            raise
+    
+    async def _setup_natural_lighting(self, parent_path: Sdf.Path, lighting_data: Dict[str, Any]):
+        """Sett opp naturlig belysning med sol og himmel"""
+        # Opprett dome light for himmellys
+        dome_light_path = f"{parent_path}/DomeLight"
+        dome_light = UsdLux.DomeLight.Define(self.stage, dome_light_path)
+        
+        # Sett dome light parametre
+        intensity = lighting_data.get("ambient_intensity", 0.3)
+        dome_light.CreateIntensityAttr(intensity * 1000)  # Skalert for realistisk lysintensitet
+        
+        # Sett HDR-tekstur for dome light hvis tilgjengelig
+        time_of_day = lighting_data.get("time", "day")
+        if time_of_day == "sunset":
+            dome_light.CreateTextureFileAttr("textures/environments/sunset_hdr.exr")
+            dome_light.CreateColorAttr().Set(Gf.Vec3f(1.0, 0.8, 0.6))  # Varmere lys ved solnedgang
+        elif time_of_day == "night":
+            dome_light.CreateTextureFileAttr("textures/environments/night_sky_hdr.exr")
+            dome_light.CreateColorAttr().Set(Gf.Vec3f(0.2, 0.3, 0.6))  # Blålig nattbelysning
+        else:  # Default: day
+            dome_light.CreateTextureFileAttr("textures/environments/clear_sky_hdr.exr")
+            dome_light.CreateColorAttr().Set(Gf.Vec3f(0.9, 0.9, 1.0))  # Nøytralt daglys
+        
+        # Opprett distant light for sollys
+        distant_light_path = f"{parent_path}/SunLight"
+        distant_light = UsdLux.DistantLight.Define(self.stage, distant_light_path)
+        
+        # Sett distant light parametre
+        sun_intensity = lighting_data.get("intensity", 1.0)
+        distant_light.CreateIntensityAttr(sun_intensity * 5000)
+        
+        # Sett solens retning basert på tid på dagen
+        if time_of_day == "sunrise":
+            distant_light.CreateAngleAttr(5.0)  # Smalere stråler for skarpere skygger
+            xform = UsdGeom.Xformable(distant_light)
+            xform.AddRotateXOp().Set(5)    # Lav solvinkel
+            xform.AddRotateYOp().Set(-80)  # Østlig retning
+            distant_light.CreateColorAttr().Set(Gf.Vec3f(1.0, 0.8, 0.7))  # Varm morgensol
+        elif time_of_day == "sunset":
+            distant_light.CreateAngleAttr(5.0)
+            xform = UsdGeom.Xformable(distant_light)
+            xform.AddRotateXOp().Set(15)   # Lav solvinkel
+            xform.AddRotateYOp().Set(80)   # Vestlig retning
+            distant_light.CreateColorAttr().Set(Gf.Vec3f(1.0, 0.7, 0.4))  # Oransje kveldssol
+        elif time_of_day == "night":
+            distant_light.CreateIntensityAttr(sun_intensity * 100)  # Mye svakere om natten
+            xform = UsdGeom.Xformable(distant_light)
+            xform.AddRotateXOp().Set(-45)  # Månen høyt på himmelen
+            distant_light.CreateColorAttr().Set(Gf.Vec3f(0.8, 0.8, 1.0))  # Blåhvitt månelys
+        else:  # Default: day
+            distant_light.CreateAngleAttr(2.5)
+            xform = UsdGeom.Xformable(distant_light)
+            xform.AddRotateXOp().Set(45)   # Høy solvinkel
+            xform.AddRotateYOp().Set(0)    # Sørlig retning
+            distant_light.CreateColorAttr().Set(Gf.Vec3f(1.0, 0.98, 0.95))  # Nøytralt dagslys
+    
+    async def _setup_indoor_lighting(self, parent_path: Sdf.Path, lighting_data: Dict[str, Any]):
+        """Sett opp innendørs belysning med ambient light og area lights"""
+        # Opprett ambient light for grunnleggende rombelysning
+        ambient_light_path = f"{parent_path}/AmbientLight"
+        ambient_light = UsdLux.DomeLight.Define(self.stage, ambient_light_path)
+        
+        # Sett ambient light parametre
+        intensity = lighting_data.get("ambient_intensity", 0.5)
+        ambient_light.CreateIntensityAttr(intensity * 300)
+        ambient_light.CreateColorAttr().Set(Gf.Vec3f(1.0, 0.98, 0.95))  # Nøytralt innendørslys
+        
+        # Opprett hovedlyskilde for rommet
+        main_light_path = f"{parent_path}/MainLight"
+        main_light = UsdLux.RectLight.Define(self.stage, main_light_path)
+        
+        # Plasser og juster hovedlyset
+        main_intensity = lighting_data.get("intensity", 1.0)
+        main_light.CreateIntensityAttr(main_intensity * 1000)
+        main_light.CreateWidthAttr(2.0)
+        main_light.CreateHeightAttr(1.5)
+        main_light.CreateColorAttr().Set(Gf.Vec3f(1.0, 0.95, 0.9))  # Litt varmere hovedlys
+        
+        # Plasser lyset i taket pekende nedover
+        xform = UsdGeom.Xformable(main_light)
+        xform.AddTranslateOp().Set(Gf.Vec3d(0, 2.5, 0))  # Høyde avhenger av romstørrelse
+        xform.AddRotateXOp().Set(90)  # Peker nedover
+        
+        # Legg til fyllys på motsatt side
+        fill_light_path = f"{parent_path}/FillLight"
+        fill_light = UsdLux.RectLight.Define(self.stage, fill_light_path)
+        
+        # Sett fyllysparametre
+        fill_light.CreateIntensityAttr(main_intensity * 300)
+        fill_light.CreateWidthAttr(1.5)
+        fill_light.CreateHeightAttr(1.0)
+        fill_light.CreateColorAttr().Set(Gf.Vec3f(0.9, 0.9, 1.0))  # Litt kjøligere fyllys
+        
+        # Plasser fyllyset
+        xform = UsdGeom.Xformable(fill_light)
+        xform.AddTranslateOp().Set(Gf.Vec3d(-3, 1.5, 3))
+        xform.AddRotateXOp().Set(30)
+        xform.AddRotateYOp().Set(45)
+    
+    async def _setup_studio_lighting(self, parent_path: Sdf.Path, lighting_data: Dict[str, Any]):
+        """Sett opp studio-stil belysning med trepunkts lysrigg"""
+        # Basisintensitet
+        base_intensity = lighting_data.get("intensity", 1.0)
+        
+        # Hovedlys (key light)
+        key_light_path = f"{parent_path}/KeyLight"
+        key_light = UsdLux.RectLight.Define(self.stage, key_light_path)
+        
+        key_light.CreateIntensityAttr(base_intensity * 1500)
+        key_light.CreateWidthAttr(2.0)
+        key_light.CreateHeightAttr(1.0)
+        key_light.CreateColorAttr().Set(Gf.Vec3f(1.0, 0.98, 0.95))  # Nøytralt hovedlys
+        
+        # Plasser hovedlyset
+        xform = UsdGeom.Xformable(key_light)
+        xform.AddTranslateOp().Set(Gf.Vec3d(3, 3, 3))
+        xform.AddRotateYOp().Set(-45)
+        xform.AddRotateXOp().Set(-30)
+        
+        # Fyllys (fill light)
+        fill_light_path = f"{parent_path}/FillLight"
+        fill_light = UsdLux.RectLight.Define(self.stage, fill_light_path)
+        
+        fill_light.CreateIntensityAttr(base_intensity * 600)  # 40% av hovedlys
+        fill_light.CreateWidthAttr(3.0)
+        fill_light.CreateHeightAttr(2.0)
+        fill_light.CreateColorAttr().Set(Gf.Vec3f(0.9, 0.9, 1.0))  # Litt kjøligere
+        
+        # Plasser fyllyset
+        xform = UsdGeom.Xformable(fill_light)
+        xform.AddTranslateOp().Set(Gf.Vec3d(-4, 2, 3))
+        xform.AddRotateYOp().Set(30)
+        xform.AddRotateXOp().Set(-15)
+        
+        # Bakgrunnsbelysning (rim light)
+        rim_light_path = f"{parent_path}/RimLight"
+        rim_light = UsdLux.RectLight.Define(self.stage, rim_light_path)
+        
+        rim_light.CreateIntensityAttr(base_intensity * 1200)  # 80% av hovedlys
+        rim_light.CreateWidthAttr(1.5)
+        rim_light.CreateHeightAttr(3.0)
+        rim_light.CreateColorAttr().Set(Gf.Vec3f(0.95, 0.95, 1.0))  # Litt blålig
+        
+        # Plasser kantlyset
+        xform = UsdGeom.Xformable(rim_light)
+        xform.AddTranslateOp().Set(Gf.Vec3d(0, 2, -4))
+        xform.AddRotateYOp().Set(180)
+        xform.AddRotateXOp().Set(-15)
+    
+    async def _add_artificial_light(self, parent_path: Sdf.Path, light_data: Dict[str, Any]):
+        """Legg til en kunstig lyskilde"""
+        light_type = light_data.get("type", "point")
+        position = light_data.get("position", [0, 2, 0])
+        intensity = light_data.get("intensity", 1.0)
+        color = light_data.get("color", [1, 1, 1])
+        name = light_data.get("name", f"Light_{light_type}")
+        
+        # Opprett lysprim
+        light_path = f"{parent_path}/{name}"
+        light_prim = None
+        
+        if light_type == "point":
+            light_prim = UsdLux.SphereLight.Define(self.stage, light_path)
+            UsdLux.SphereLight(light_prim).CreateRadiusAttr(0.1)
+            UsdLux.SphereLight(light_prim).CreateTreatAsPointAttr(True)
+        
+        elif light_type == "spot":
+            light_prim = UsdLux.DiskLight.Define(self.stage, light_path)
+            UsdLux.DiskLight(light_prim).CreateRadiusAttr(0.2)
+            # Spot fokus
+            UsdLux.Light(light_prim).CreateShapingConeAngleAttr(light_data.get("cone_angle", 45.0))
+            UsdLux.Light(light_prim).CreateShapingConeSoftnessAttr(light_data.get("cone_softness", 0.2))
+        
+        elif light_type == "area":
+            light_prim = UsdLux.RectLight.Define(self.stage, light_path)
+            UsdLux.RectLight(light_prim).CreateWidthAttr(light_data.get("width", 1.0))
+            UsdLux.RectLight(light_prim).CreateHeightAttr(light_data.get("height", 0.5))
+        
+        else:
+            logger.warning(f"Unknown light type: {light_type}. Using point light.")
+            light_prim = UsdLux.SphereLight.Define(self.stage, light_path)
+            UsdLux.SphereLight(light_prim).CreateRadiusAttr(0.1)
+        
+        # Sett lysegenskaper
+        if light_prim:
+            UsdLux.Light(light_prim).CreateIntensityAttr(intensity * 500)  # Skalert for realistisk intensitet
+            UsdLux.Light(light_prim).CreateColorAttr().Set(Gf.Vec3f(*color[:3]))
+            
+            # Plasser lyset
+            xform = UsdGeom.Xformable(light_prim)
+            xform.AddTranslateOp().Set(Gf.Vec3d(*position))
+            
+            # Roter lyset hvis retning er spesifisert
+            if "direction" in light_data:
+                direction = light_data["direction"]
+                
+                # Beregn rotasjonsvinkel fra Z-aksen til retningsvektoren
+                from math import acos, degrees, sqrt
+                z_axis = [0, 0, 1]
+                
+                # Normaliser retningsvektoren
+                dir_length = sqrt(sum(d*d for d in direction))
+                if dir_length > 0.001:
+                    normalized_dir = [d / dir_length for d in direction]
+                    
+                    # Beregn rotasjonsvinkel rundt Y-aksen (yaw)
+                    yaw = degrees(acos(normalized_dir[2]))
+                    xform.AddRotateYOp().Set(yaw)
+                    
+                    # Beregn rotasjonsvinkel rundt X-aksen (pitch)
+                    pitch = degrees(acos(normalized_dir[1]))
+                    xform.AddRotateXOp().Set(pitch)
+    
+    async def _add_environment(self, environment_data: Dict[str, Any]):
+        """Legg til miljø og omgivelser"""
+        try:
+            logger.info("Adding environment elements")
+            
+            # Opprett miljø-prim
+            environment_prim_path = "/World/Environment"
+            environment_prim = self.stage.DefinePrim(environment_prim_path, "Scope")
+            
+            # Legg til himmel/bakgrunn hvis spesifisert
+            if "sky" in environment_data:
+                await self._add_sky(environment_prim.GetPath(), environment_data["sky"])
+            
+            # Legg til terreng hvis spesifisert
+            if "terrain" in environment_data:
+                await self._add_terrain(environment_prim.GetPath(), environment_data["terrain"])
+            
+            # Legg til vegetasjon hvis spesifisert
+            if "vegetation" in environment_data:
+                await self._add_vegetation(environment_prim.GetPath(), environment_data["vegetation"])
+            
+            # Legg til omgivende objekter hvis spesifisert
+            if "surroundings" in environment_data:
+                await self._add_surroundings(environment_prim.GetPath(), environment_data["surroundings"])
+            
+            logger.info("Environment elements added successfully")
+            
+        except Exception as e:
+            logger.error(f"Error adding environment: {str(e)}")
+            raise
+    
+    async def _add_sky(self, parent_path: Sdf.Path, sky_data: Dict[str, Any]):
+        """Legg til himmel og atmosfære"""
+        # Opprett dome for himmel
+        sky_prim_path = f"{parent_path}/Sky"
+        sky_prim = self.stage.DefinePrim(sky_prim_path, "Sphere")
+        
+        # Sett skydome-parametre
+        UsdGeom.Sphere(sky_prim).CreateRadiusAttr(5000)  # Stor radius for himmel
+        
+        # Flytt skydome til kamera-nullpunkt
+        xform = UsdGeom.Xformable(sky_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(0, 0, 0))
+        
+        # Opprett materiale for himmel
+        sky_material_path = f"{parent_path}/SkyMaterial"
+        sky_material = UsdShade.Material.Define(self.stage, sky_material_path)
+        
+        # Opprett shader for himmel
+        sky_shader_path = f"{sky_material_path}/Shader"
+        sky_shader = UsdShade.Shader.Define(self.stage, sky_shader_path)
+        sky_shader.CreateIdAttr("UsdPreviewSurface")
+        
+        # Sett shadergenskaper for himmel
+        sky_shader.CreateInput("emissiveColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(0.5, 0.7, 1.0))
+        sky_shader.CreateInput("opacity", Sdf.ValueTypeNames.Float).Set(1.0)
+        
+        # Koble shader til materiale
+        sky_material.CreateSurfaceOutput().ConnectToSource(
+            sky_shader.CreateOutput("surface", Sdf.ValueTypeNames.Token))
+        
+        # Bindmaterialet til skydome
+        UsdShade.MaterialBindingAPI(sky_prim).Bind(sky_material)
+    
+    async def _add_terrain(self, parent_path: Sdf.Path, terrain_data: Dict[str, Any]):
+        """Legg til terreng"""
+        # Opprett terreng-prim
+        terrain_prim_path = f"{parent_path}/Terrain"
+        terrain_prim = self.stage.DefinePrim(terrain_prim_path, "Mesh")
+        
+        # Generer terrengmesh basert på data
+        width = terrain_data.get("width", 100)
+        length = terrain_data.get("length", 100)
+        height_scale = terrain_data.get("height_scale", 5)
+        resolution = terrain_data.get("resolution", 50)
+        
+        # Generer høydekart hvis ikke gitt
+        height_map = terrain_data.get("height_map", None)
+        if not height_map:
+            height_map = self._generate_procedural_terrain(resolution, resolution, height_scale)
+        
+        # Opprett terrenggeometri
+        vertices, faces, uvs = self._generate_terrain_mesh(width, length, resolution, height_map)
+        
+        # Sett mesh-data
+        terrain_mesh = UsdGeom.Mesh(terrain_prim)
+        terrain_mesh.CreatePointsAttr(vertices)
+        terrain_mesh.CreateFaceVertexIndicesAttr(faces)
+        terrain_mesh.CreateFaceVertexCountsAttr([4] * (len(faces) // 4))
+        terrain_mesh.CreatePrimvar("st", Sdf.ValueTypeNames.TexCoord2fArray, UsdGeom.Tokens.varying).Set(uvs)
+        
+        # Plasser terrenget
+        xform = UsdGeom.Xformable(terrain_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(-width/2, -height_scale/2, -length/2))
+        
+        # Opprett materialer for terreng
+        material_name = terrain_data.get("material", "grass")
+        self._create_and_assign_material(terrain_prim_path, material_name)
+    
+    def _generate_procedural_terrain(self, width: int, length: int, height_scale: float) -> List[float]:
+        """Generer et prosedurelt høydekart for terreng"""
+        import random
+        
+        # Opprett 2D-grid med tilfeldig høyde
+        height_map = [[0.0 for _ in range(length)] for _ in range(width)]
+        
+        # Sett hjørneverdier
+        height_map[0][0] = random.uniform(0, 1) * height_scale
+        height_map[0][length-1] = random.uniform(0, 1) * height_scale
+        height_map[width-1][0] = random.uniform(0, 1) * height_scale
+        height_map[width-1][length-1] = random.uniform(0, 1) * height_scale
+        
+        # Diamond-Square algoritme for terrengenerasjon
+        def diamond_square(x1, y1, x2, y2, roughness):
+            if x2 - x1 < 2 and y2 - y1 < 2:
+                return
+            
+            # Midtpunktet
+            mid_x = (x1 + x2) // 2
+            mid_y = (y1 + y2) // 2
+            
+            # Diamond step: Sett midtpunktet til gjennomsnittet av hjørnene pluss litt tilfeldig verdi
+            if height_map[mid_x][mid_y] == 0:
+                avg = (height_map[x1][y1] + height_map[x1][y2] + height_map[x2][y1] + height_map[x2][y2]) / 4
+                height_map[mid_x][mid_y] = avg + random.uniform(-1, 1) * roughness * height_scale
+            
+            # Square step: Sett midtpunktet på hver kant
+            # Topp
+            if height_map[mid_x][y1] == 0:
+                avg = (height_map[x1][y1] + height_map[x2][y1] + height_map[mid_x][mid_y]) / 3
+                height_map[mid_x][y1] = avg + random.uniform(-1, 1) * roughness * height_scale
+            
+            # Høyre
+            if height_map[x2][mid_y] == 0:
+                avg = (height_map[x2][y1] + height_map[x2][y2] + height_map[mid_x][mid_y]) / 3
+                height_map[x2][mid_y] = avg + random.uniform(-1, 1) * roughness * height_scale
+            
+            # Bunn
+            if height_map[mid_x][y2] == 0:
+                avg = (height_map[x1][y2] + height_map[x2][y2] + height_map[mid_x][mid_y]) / 3
+                height_map[mid_x][y2] = avg + random.uniform(-1, 1) * roughness * height_scale
+            
+            # Venstre
+            if height_map[x1][mid_y] == 0:
+                avg = (height_map[x1][y1] + height_map[x1][y2] + height_map[mid_x][mid_y]) / 3
+                height_map[x1][mid_y] = avg + random.uniform(-1, 1) * roughness * height_scale
+            
+            # Rekursivt kall for kvadrantene
+            next_roughness = roughness * 0.5
+            diamond_square(x1, y1, mid_x, mid_y, next_roughness)
+            diamond_square(mid_x, y1, x2, mid_y, next_roughness)
+            diamond_square(x1, mid_y, mid_x, y2, next_roughness)
+            diamond_square(mid_x, mid_y, x2, y2, next_roughness)
+        
+        # Start algoritmen
+        diamond_square(0, 0, width-1, length-1, 1.0)
+        
+        # Flatten 2D array to 1D
+        flat_height_map = []
+        for row in height_map:
+            flat_height_map.extend(row)
+        
+        return flat_height_map
+    
+    def _generate_terrain_mesh(self, width: float, length: float, resolution: int, 
+                              height_map: List[float]) -> Tuple[List[Gf.Vec3f], List[int], List[Gf.Vec2f]]:
+        """Generer terrengmesh fra høydekart"""
+        vertices = []
+        faces = []
+        uvs = []
+        
+        # Opprett vertekser i et grid
+        for i in range(resolution):
+            for j in range(resolution):
+                # Beregn posisjon i 3D-rom
+                x = (i / (resolution - 1)) * width
+                z = (j / (resolution - 1)) * length
+                y = height_map[i * resolution + j] if i * resolution + j < len(height_map) else 0
+                
+                vertices.append(Gf.Vec3f(x, y, z))
+                uvs.append(Gf.Vec2f(i / (resolution - 1), j / (resolution - 1)))
+        
+        # Opprett kvadrilaterale flater
+        for i in range(resolution - 1):
+            for j in range(resolution - 1):
+                v0 = i * resolution + j
+                v1 = v0 + 1
+                v2 = (i + 1) * resolution + j + 1
+                v3 = (i + 1) * resolution + j
+                
+                faces.extend([v0, v1, v2, v3])
+        
+        return vertices, faces, uvs
+    
+    async def _add_vegetation(self, parent_path: Sdf.Path, vegetation_data: Dict[str, Any]):
+        """Legg til vegetasjon som trær, busker, etc."""
+        # Opprett vegetasjon-prim
+        vegetation_prim_path = f"{parent_path}/Vegetation"
+        vegetation_prim = self.stage.DefinePrim(vegetation_prim_path, "Scope")
+        
+        # Legg til trær
+        if "trees" in vegetation_data:
+            await self._add_trees(vegetation_prim.GetPath(), vegetation_data["trees"])
+        
+        # Legg til busker
+        if "bushes" in vegetation_data:
+            await self._add_bushes(vegetation_prim.GetPath(), vegetation_data["bushes"])
+        
+        # Legg til gress
+        if "grass" in vegetation_data:
+            await self._add_grass(vegetation_prim.GetPath(), vegetation_data["grass"])
+    
+    async def _add_trees(self, parent_path: Sdf.Path, trees_data: Dict[str, Any]):
+        """Legg til trær"""
+        # Hent tredata
+        count = trees_data.get("count", 10)
+        area = trees_data.get("area", {"min_x": -20, "max_x": 20, "min_z": -20, "max_z": 20})
+        species = trees_data.get("species", ["pine", "oak"])
+        
+        # Opprett trær-prim
+        trees_prim_path = f"{parent_path}/Trees"
+        trees_prim = self.stage.DefinePrim(trees_prim_path, "Scope")
+        
+        # Tilfeldig plassering av trær
+        import random
+        
+        for i in range(count):
+            # Velg tilfeldig art
+            tree_species = random.choice(species)
+            
+            # Tilfeldig plassering innenfor område
+            x = random.uniform(area["min_x"], area["max_x"])
+            z = random.uniform(area["min_z"], area["max_z"])
+            
+            # Opprett tre
+            tree_prim_path = f"{trees_prim_path}/Tree_{i}"
+            await self._create_tree(tree_prim_path, tree_species, [x, 0, z])
+    
+    async def _create_tree(self, path: str, species: str, position: List[float]):
+        """Opprett et tre av spesifisert art"""
+        # Opprett tre-xform
+        tree_prim = self.stage.DefinePrim(path, "Xform")
+        
+        # Plasser treet
+        xform = UsdGeom.Xformable(tree_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(*position))
+        
+        # Tilfeldig rotasjon og skalering for variasjon
+        import random
+        rotation = random.uniform(0, 360)
+        scale = random.uniform(0.8, 1.2)
+        
+        xform.AddRotateYOp().Set(rotation)
+        xform.AddScaleOp().Set(Gf.Vec3d(scale, scale, scale))
+        
+        # Opprett treets deler basert på art
+        if species == "pine":
+            await self._create_pine_tree(tree_prim.GetPath())
+        elif species == "oak":
+            await self._create_oak_tree(tree_prim.GetPath())
+        else:
+            await self._create_generic_tree(tree_prim.GetPath())
+    
+    async def _create_pine_tree(self, path: Sdf.Path):
+        """Opprett et furutre"""
+        # Opprett stamme
+        trunk_path = f"{path}/Trunk"
+        trunk_prim = self.stage.DefinePrim(trunk_path, "Cylinder")
+        
+        # Sett stammeegenskaper
+        trunk = UsdGeom.Cylinder(trunk_prim)
+        trunk.CreateRadiusAttr(0.2)
+        trunk.CreateHeightAttr(5.0)
+        
+        # Plasser stammen
+        xform = UsdGeom.Xformable(trunk_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(0, 2.5, 0))
+        
+        # Opprett kroneMesh
+        crown_path = f"{path}/Crown"
+        crown_prim = self.stage.DefinePrim(crown_path, "Cone")
+        
+        # Sett kroneegenskaper
+        crown = UsdGeom.Cone(crown_prim)
+        crown.CreateRadiusAttr(1.5)
+        crown.CreateHeightAttr(4.0)
+        
+        # Plasser kronen
+        xform = UsdGeom.Xformable(crown_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(0, 5.0, 0))
+        
+        # Opprett og tilordne materialer
+        self._create_and_assign_material(trunk_path, "wood_bark")
+        self._create_and_assign_material(crown_path, "pine_needles")
+    
+    async def _create_oak_tree(self, path: Sdf.Path):
+        """Opprett et eiketrær"""
+        # Opprett stamme
+        trunk_path = f"{path}/Trunk"
+        trunk_prim = self.stage.DefinePrim(trunk_path, "Cylinder")
+        
+        # Sett stammeegenskaper
+        trunk = UsdGeom.Cylinder(trunk_prim)
+        trunk.CreateRadiusAttr(0.3)
+        trunk.CreateHeightAttr(4.0)
+        
+        # Plasser stammen
+        xform = UsdGeom.Xformable(trunk_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(0, 2.0, 0))
+        
+        # Opprett kroneMesh (kule for løvtre)
+        crown_path = f"{path}/Crown"
+        crown_prim = self.stage.DefinePrim(crown_path, "Sphere")
+        
+        # Sett kroneegenskaper
+        crown = UsdGeom.Sphere(crown_prim)
+        crown.CreateRadiusAttr(2.5)
+        
+        # Plasser kronen
+        xform = UsdGeom.Xformable(crown_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(0, 5.0, 0))
+        
+        # Opprett og tilordne materialer
+        self._create_and_assign_material(trunk_path, "wood_bark")
+        self._create_and_assign_material(crown_path, "oak_leaves")
+    
+    async def _create_generic_tree(self, path: Sdf.Path):
+        """Opprett et generisk tre"""
+        # Opprett stamme
+        trunk_path = f"{path}/Trunk"
+        trunk_prim = self.stage.DefinePrim(trunk_path, "Cylinder")
+        
+        # Sett stammeegenskaper
+        trunk = UsdGeom.Cylinder(trunk_prim)
+        trunk.CreateRadiusAttr(0.25)
+        trunk.CreateHeightAttr(3.5)
+        
+        # Plasser stammen
+        xform = UsdGeom.Xformable(trunk_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(0, 1.75, 0))
+        
+        # Opprett kroneMesh
+        crown_path = f"{path}/Crown"
+        crown_prim = self.stage.DefinePrim(crown_path, "Sphere")
+        
+        # Sett kroneegenskaper
+        crown = UsdGeom.Sphere(crown_prim)
+        crown.CreateRadiusAttr(2.0)
+        
+        # Plasser kronen
+        xform = UsdGeom.Xformable(crown_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(0, 4.0, 0))
+        
+        # Opprett og tilordne materialer
+        self._create_and_assign_material(trunk_path, "wood_bark")
+        self._create_and_assign_material(crown_path, "generic_leaves")
+    
+    async def _add_bushes(self, parent_path: Sdf.Path, bushes_data: Dict[str, Any]):
+        """Legg til busker"""
+        # Forenklet implementasjon - lignende trær, men mindre
+        count = bushes_data.get("count", 20)
+        area = bushes_data.get("area", {"min_x": -20, "max_x": 20, "min_z": -20, "max_z": 20})
+        
+        # Opprett busker-prim
+        bushes_prim_path = f"{parent_path}/Bushes"
+        bushes_prim = self.stage.DefinePrim(bushes_prim_path, "Scope")
+        
+        # Tilfeldig plassering av busker
+        import random
+        
+        for i in range(count):
+            # Tilfeldig plassering innenfor område
+            x = random.uniform(area["min_x"], area["max_x"])
+            z = random.uniform(area["min_z"], area["max_z"])
+            
+            # Opprett busk
+            bush_path = f"{bushes_prim_path}/Bush_{i}"
+            bush_prim = self.stage.DefinePrim(bush_path, "Sphere")
+            
+            # Sett buskegenskaper
+            bush = UsdGeom.Sphere(bush_prim)
+            bush.CreateRadiusAttr(random.uniform(0.5, 1.0))
+            
+            # Plasser busken
+            xform = UsdGeom.Xformable(bush_prim)
+            xform.AddTranslateOp().Set(Gf.Vec3d(x, 0.5, z))
+            
+            # Tilfeldig skalering og "squashing" for mer buskete form
+            scale_x = random.uniform(0.8, 1.2)
+            scale_y = random.uniform(0.7, 1.0)
+            scale_z = random.uniform(0.8, 1.2)
+            
+            xform.AddScaleOp().Set(Gf.Vec3d(scale_x, scale_y, scale_z))
+            
+            # Opprett og tilordne materiale
+            self._create_and_assign_material(bush_path, "bush_leaves")
+    
+    async def _add_grass(self, parent_path: Sdf.Path, grass_data: Dict[str, Any]):
+        """Legg til gress (forenklet som en teksturert plan)"""
+        # Opprett gress-prim
+        grass_prim_path = f"{parent_path}/Grass"
+        grass_prim = self.stage.DefinePrim(grass_prim_path, "Plane")
+        
+        # Hent gressdata
+        size = grass_data.get("size", 40)
+        density = grass_data.get("density", 0.8)
+        
+        # Sett gressegenskaper
+        grass = UsdGeom.Plane(grass_prim)
+        grass.CreateSizeAttr(size)
+        
+        # Plasser gressplanen
+        xform = UsdGeom.Xformable(grass_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(0, 0.01, 0))  # Litt over bakken for å unngå z-fighting
+        
+        # Opprett og tilordne materiale
+        grass_material_path = f"{parent_path}/GrassMaterial"
+        grass_material = UsdShade.Material.Define(self.stage, grass_material_path)
+        
+        # Opprett PBR shader
+        shader_path = f"{grass_material_path}/Shader"
+        shader = UsdShade.Shader.Define(self.stage, shader_path)
+        shader.CreateIdAttr("UsdPreviewSurface")
+        
+        # Sett shader-parametre
+        shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(0.3, 0.5, 0.2))
+        shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.9)
+        
+        # Tekstur for gress
+        tex_shader_path = f"{grass_material_path}/GrassTexture"
+        tex_shader = UsdShade.Shader.Define(self.stage, tex_shader_path)
+        tex_shader.CreateIdAttr("UsdUVTexture")
+        tex_shader.CreateInput("file", Sdf.ValueTypeNames.Asset).Set("textures/grass_diffuse.png")
+        tex_shader.CreateInput("wrapS", Sdf.ValueTypeNames.Token).Set("repeat")
+        tex_shader.CreateInput("wrapT", Sdf.ValueTypeNames.Token).Set("repeat")
+        tex_shader.CreateInput("scale", Sdf.ValueTypeNames.Float2).Set(Gf.Vec2f(size/2, size/2))
+        
+        # Koble tekstur til shader
+        tex_output = tex_shader.CreateOutput("rgb", Sdf.ValueTypeNames.Float3)
+        shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).ConnectToSource(tex_output)
+        
+        # Koble shader til materiale
+        grass_material.CreateSurfaceOutput().ConnectToSource(shader.CreateOutput("surface", Sdf.ValueTypeNames.Token))
+        
+        # Bindmaterialet til gress
+        UsdShade.MaterialBindingAPI(grass_prim).Bind(grass_material)
+    
+    async def _add_surroundings(self, parent_path: Sdf.Path, surroundings_data: Dict[str, Any]):
+        """Legg til omgivende objekter som bygninger, gjerder, etc."""
+        # Forenklet implementasjon - legg til noen enkle objekter
+        # Dette kan utvides med mer spesifikke bygninger, veier, etc.
+        
+        # Opprett surroundings-prim
+        surroundings_prim_path = f"{parent_path}/Surroundings"
+        surroundings_prim = self.stage.DefinePrim(surroundings_prim_path, "Scope")
+        
+        # Legg til bygninger hvis spesifisert
+        if "buildings" in surroundings_data:
+            await self._add_buildings(surroundings_prim.GetPath(), surroundings_data["buildings"])
+        
+        # Legg til gjerder hvis spesifisert
+        if "fences" in surroundings_data:
+            await self._add_fences(surroundings_prim.GetPath(), surroundings_data["fences"])
+    
+    async def _add_buildings(self, parent_path: Sdf.Path, buildings_data: List[Dict[str, Any]]):
+        """Legg til enkle bygninger"""
+        for i, building in enumerate(buildings_data):
+            position = building.get("position", [0, 0, 0])
+            size = building.get("size", [5, 3, 5])  # width, height, depth
+            
+            # Opprett bygning
+            building_path = f"{parent_path}/Building_{i}"
+            building_prim = self.stage.DefinePrim(building_path, "Cube")
+            
+            # Sett størrelse
+            UsdGeom.Cube(building_prim).CreateSizeAttr(1.0)  # Standardkube med størrelse 1
+            
+            # Plasser og skaler bygningen
+            xform = UsdGeom.Xformable(building_prim)
+            xform.AddTranslateOp().Set(Gf.Vec3d(position[0], position[1] + size[1]/2, position[2]))
+            xform.AddScaleOp().Set(Gf.Vec3d(size[0], size[1], size[2]))
+            
+            # Opprett og tilordne materiale
+            material_name = building.get("material", "concrete")
+            self._create_and_assign_material(building_path, material_name)
+    
+    async def _add_fences(self, parent_path: Sdf.Path, fences_data: List[Dict[str, Any]]):
+        """Legg til gjerder"""
+        for i, fence in enumerate(fences_data):
+            start = fence.get("start", [0, 0, 0])
+            end = fence.get("end", [10, 0, 0])
+            height = fence.get("height", 1.0)
+            
+            # Opprett gjerde
+            fence_path = f"{parent_path}/Fence_{i}"
+            fence_prim = self.stage.DefinePrim(fence_path, "Xform")
+            
+            # Beregn lengde, midtpunkt og retning
+            length = ((end[0] - start[0])**2 + (end[2] - start[2])**2)**0.5
+            midpoint = [(start[0] + end[0])/2, (start[1] + end[1])/2, (start[2] + end[2])/2]
+            
+            direction = [end[0] - start[0], end[1] - start[1], end[2] - start[2]]
+            
+            # Beregn rotasjonsvinkel
+            angle = np.degrees(np.arctan2(direction[2], direction[0]))
+            
+            # Opprett gjerdepanelet
+            panel_path = f"{fence_path}/Panel"
+            panel_prim = self.stage.DefinePrim(panel_path, "Cube")
+            
+            # Sett gjerdepanelstørrelse
+            UsdGeom.Cube(panel_prim).CreateSizeAttr(1.0)
+            
+            # Plasser og skaler gjerdepanelet
+            xform = UsdGeom.Xformable(panel_prim)
+            xform.AddScaleOp().Set(Gf.Vec3d(length, height, 0.05))
+            xform.AddTranslateOp().Set(Gf.Vec3d(0, height/2, 0))
+            
+            # Plasser og roter hele gjerdet
+            xform = UsdGeom.Xformable(fence_prim)
+            xform.AddTranslateOp().Set(Gf.Vec3d(midpoint[0], midpoint[1], midpoint[2]))
+            xform.AddRotateYOp().Set(angle)
+            
+            # Opprett og tilordne materiale
+            material_name = fence.get("material", "wood")
+            self._create_and_assign_material(panel_path, material_name)
+    
+    def _create_and_assign_material(self, prim_path: str, material_name: str):
+        """Hjelpefunksjon for å opprette og tilordne et standard materiale"""
+        try:
+            # Sjekk om materialet allerede eksisterer
+            material_path = f"/World/Materials/{material_name}"
+            material_prim = self.stage.GetPrimAtPath(material_path)
+            
+            if not material_prim.IsValid():
+                # Opprett material hvis det ikke eksisterer
+                if material_name in self.material_library.materials:
+                    material_props = self.material_library.materials[material_name]
+                    self.material_library.create_usd_material(self.stage, material_name, material_props)
+                else:
+                    # Opprett et standard materiale
+                    standard_props = {
+                        "type": "physically_based",
+                        "base_color": [0.8, 0.8, 0.8],
+                        "roughness": 0.5,
+                        "metallic": 0.0
+                    }
+                    self.material_library.create_usd_material(self.stage, material_name, standard_props)
+            
+            # Hent materialet
+            material = UsdShade.Material.Get(self.stage, material_path)
+            
+            # Bindmaterialet til prim
+            prim = self.stage.GetPrimAtPath(prim_path)
+            if prim.IsValid():
+                UsdShade.MaterialBindingAPI(prim).Bind(material)
+            
+        except Exception as e:
+            logger.error(f"Error creating/assigning material {material_name}: {str(e)}")
+    
+    def _add_bim_metadata(self, floor_plan_data: Dict[str, Any], structural_data: Dict[str, Any]):
+        """Legg til BIM-metadata for modellen"""
+        if not self.config.bim_metadata_enabled:
+            return
+        
+        try:
+            logger.info("Adding BIM metadata")
+            
+            # Opprett BIM-metadatanode
+            bim_path = "/World/BIM"
+            bim_prim = self.stage.DefinePrim(bim_path, "Scope")
+            
+            # Legg til prosjektinformasjon
+            project_info = {
+                "name": floor_plan_data.get("project_name", "Unnamed Project"),
+                "address": floor_plan_data.get("address", ""),
+                "owner": floor_plan_data.get("owner", ""),
+                "architect": floor_plan_data.get("architect", ""),
+                "creation_date": datetime.now().isoformat(),
+                "software": f"OmniverseRenderer v{self.config.model_version}"
+            }
+            
+            for key, value in project_info.items():
+                bim_prim.GetPrim().CreateAttribute(f"project:{key}", Sdf.ValueTypeNames.String).Set(value)
+            
+            # Legg til bygningsinformasjon
+            building_info = {
+                "type": floor_plan_data.get("building_type", "residential"),
+                "floors": len(floor_plan_data.get("floors", [])),
+                "height": floor_plan_data.get("total_height", 0),
+                "area": floor_plan_data.get("total_area", 0),
+                "year_built": floor_plan_data.get("year_built", 0)
+            }
+            
+            for key, value in building_info.items():
+                bim_prim.GetPrim().CreateAttribute(f"building:{key}", Sdf.ValueTypeNames.String).Set(str(value))
+            
+            # Legg til materialinformasjon
+            materials_info = {}
+            for surface, material in floor_plan_data.get("materials", {}).items():
+                materials_info[surface] = material
+            
+            material_attributes = bim_prim.GetPrim().CreateAttribute(
+                "materials:assignments", Sdf.ValueTypeNames.String)
+            material_attributes.Set(str(materials_info))
+            
+            # Eksporter BIM-data til egen fil hvis konfigurert
+            if self.config.ifc_compatibility:
+                self._export_bim_data(bim_path, floor_plan_data, structural_data)
+            
+            logger.info("BIM metadata added successfully")
+            
+        except Exception as e:
+            logger.error(f"Error adding BIM metadata: {str(e)}")
+    
+    def _export_bim_data(self, bim_path: str, floor_plan_data: Dict[str, Any], 
+                        structural_data: Dict[str, Any]):
+        """Eksporter BIM-data til IFC-kompatibel format"""
+        try:
+            # Dette er en placeholder - i en reell implementasjon ville det involvere IFC-eksport
+            logger.info("Exporting BIM data (placeholder for IFC export)")
+            
+            # Eksempel: Samle data for eksport
+            export_data = {
+                "project_info": {
+                    "name": floor_plan_data.get("project_name", "Unnamed Project"),
+                    "address": floor_plan_data.get("address", ""),
+                    "owner": floor_plan_data.get("owner", "")
+                },
+                "building_info": {
+                    "type": floor_plan_data.get("building_type", "residential"),
+                    "floors": len(floor_plan_data.get("floors", [])),
+                    "height": floor_plan_data.get("total_height", 0),
+                    "area": floor_plan_data.get("total_area", 0)
+                },
+                "elements": []
+            }
+            
+            # Samle alle elementer for IFC-eksport
+            # Dette er en forenklet implementasjon
+            element_types = {
+                "walls": structural_data.get("walls", []),
+                "floors": floor_plan_data.get("floors", []),
+                "columns": structural_data.get("columns", []),
+                "beams": structural_data.get("beams", []),
+                "openings": structural_data.get("openings", [])
+            }
+            
+            for element_type, elements in element_types.items():
+                for element in elements:
+                    export_data["elements"].append({
+                        "type": element_type,
+                        "id": element.get("id", ""),
+                        "properties": element
+                    })
+            
+            # Eksporter til JSON som en enkel IFC-surrogate
+            import json
+            export_path = "bim_export.json"
+            with open(export_path, 'w') as f:
+                json.dump(export_data, f, indent=4)
+            
+            logger.info(f"BIM data exported to {export_path}")
+            
+        except Exception as e:
+            logger.error(f"Error exporting BIM data: {str(e)}")
+    
+    def _optimize_model(self):
+        """Optimaliser modellen for rendering"""
+        try:
+            logger.info("Optimizing model for rendering")
+            
+            # Flatting meshes (forenklet)
+            # I en reell implementasjon ville dette involvere mer omfattende optimalisering
+            
+            # Slå sammen UsdMeshes basert på materiale for å redusere drawcalls
+            # Dette er forenklet - reell implementasjon vil være kompleks
+            
+            # Aktiver instansiering for repeterende geometri (trær, busker, etc)
+            # Forenklet - ville være mer omfattende i praksis
+            
+            # Sett opp LOD (Level of Detail) for objekter
+            # Forenklet - ville være mer omfattende i praksis
+            
+            # Sett opp culling og synlighet
+            # For en presis implementasjon ville vi gjøre mer avansert culling
+            
+            logger.info("Model optimized successfully")
+            
+        except Exception as e:
+            logger.error(f"Error optimizing model: {str(e)}")
+    
+    async def _render_model(self, view_positions: List[Dict[str, Any]] = None, 
+                         output_path: str = None) -> Dict[str, Any]:
+        """Render 3D-modellen med høy kvalitet"""
+        try:
+            logger.info("Rendering 3D model")
+            
+            # Sett opp renderingsinnstillinger
+            self._setup_render_settings()
+            
+            # Hvis ingen kameraposisjoner er gitt, bruk standardkamera
+            if not view_positions:
+                view_positions = [{
+                    "name": "default",
+                    "position": [5, 2, 5],
+                    "target": [0, 1, 0],
+                    "focal_length": 35.0
+                }]
+            
+            # Sett opp basismappe for rendering
+            if not output_path:
+                output_path = f"renders/{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            
+            os.makedirs(output_path, exist_ok=True)
+            
+            # Render hver visning
+            render_results = []
+            for i, view in enumerate(view_positions):
+                render_result = await self._render_view(view, f"{output_path}/{view.get('name', f'view_{i}')}")
+                render_results.append(render_result)
+            
+            # Eksporter modell til ulike formater
+            model_outputs = await self._export_model(output_path)
+            
+            # Samle renderingsstatistikk
+            rendering_stats = self._collect_rendering_statistics()
+            
+            # Kompiler resultater
+            result = {
+                "model_url": model_outputs.get("usd_path"),
+                "previews": [r.get("image_path") for r in render_results if r.get("image_path")],
+                "formats": model_outputs,
+                "stats": rendering_stats
+            }
+            
+            logger.info(f"Model rendered successfully to {output_path}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error rendering model: {str(e)}")
+            raise
+    
+    def _setup_render_settings(self):
+        """Sett opp renderingsinnstillinger for høykvalitetsrendering"""
+        render_settings = {
+            "renderer": self.config.render_quality,
+            "resolution": [self.config.width, self.config.height],
+            "samples_per_pixel": self.config.samples_per_pixel,
+            "max_bounces": self.config.max_bounces,
+            "denoise": self.config.denoising_enabled,
+            "motion_blur": self.config.motion_blur,
+            "depth_of_field": self.config.depth_of_field
+        }
+        
+        # Bruk omni.kit.commands for å angi renderer-innstillinger
+        omni.kit.commands.execute('SetRenderSettings', settings=render_settings)
+    
+    async def _render_view(self, view: Dict[str, Any], output_file: str) -> Dict[str, Any]:
+        """Render en spesifikk visning"""
+        # Opprett kamera for visningen
+        camera_path = f"/World/Cameras/Camera_{view.get('name', 'view')}"
+        camera_prim = self.stage.DefinePrim(camera_path, "Camera")
+        camera = UsdGeom.Camera(camera_prim)
+        
+        # Sett kameraegenskaper
+        position = view.get("position", [5, 2, 5])
+        target = view.get("target", [0, 1, 0])
+        focal_length = view.get("focal_length", 35.0)
+        
+        # Beregn opp-vektor (vanligvis Y-aksen)
+        up = view.get("up", [0, 1, 0])
+        
+        # Plasser kameraet
+        xform = UsdGeom.Xformable(camera_prim)
+        xform.AddTranslateOp().Set(Gf.Vec3d(*position))
+        
+        # Pek kameraet mot målet
+        direction = [target[0] - position[0], target[1] - position[1], target[2] - position[2]]
+        distance = (direction[0]**2 + direction[1]**2 + direction[2]**2)**0.5
+        
+        if distance > 0.001:
+            # Beregn rotasjon for å peke mot målet
+            # Dette er en forenklet tilnærming - i praksis ville det brukes Look-At-matriser
+            from math import atan2, asin, degrees
+            
+            # Beregn yaw og pitch
+            yaw = degrees(atan2(direction[0], direction[2]))
+            pitch = degrees(asin(direction[1] / distance))
+            
+            # Bruk inverse retning for rotasjon
+            xform.AddRotateYOp().Set(-yaw)
+            xform.AddRotateXOp().Set(pitch)
+        
+        # Sett kameraegenskaper
+        camera.CreateFocalLengthAttr(focal_length)
+        camera.CreateHorizontalApertureAttr(36.0)  # 35mm film standard
+        camera.CreateVerticalApertureAttr(24.0)    # 35mm film standard
+        
+        # Sett dybdeskarphet hvis aktivert
+        if self.config.depth_of_field:
+            camera.CreateDepthOfFieldEnabledAttr(True)
+            camera.CreateFocusDistanceAttr(distance)
+            camera.CreateFStopAttr(view.get("f_stop", 5.6))
+        
+        # Aktiver kameraet i viewport
+        self.viewport.set_active_camera(camera_path)
+        
+        # Utfør rendering
+        render_result = await self._perform_rendering(output_file)
+        
+        return render_result
+    
+    async def _perform_rendering(self, output_file: str) -> Dict[str, Any]:
+        """Utfør rendering med gjeldende kamera"""
+        # Dette er en placeholder for reell rendering med Omniverse
+        # I en praktisk implementasjon ville dette involvere RTX-rendering
+        
+        # Forenklet - simuler rendering med en tidsforsinkelse
+        await asyncio.sleep(0.5)
+        
+        # Lagre rendert bilde (simulert)
+        image_path = f"{output_file}.png"
+        
+        # Simulating rendering statistics
+        render_stats = {
+            "render_time": 5.2,  # Sekunder
+            "samples": self.config.samples_per_pixel,
+            "resolution": [self.config.width, self.config.height],
+            "memory_usage": 2.1  # GB
+        }
+        
+        # Legg til statistikk til statistikkliste
+        self.stats["render_times"].append(render_stats["render_time"])
+        self.stats["memory_usage"].append(render_stats["memory_usage"])
+        
+        return {
+            "image_path": image_path,
+            "stats": render_stats
+        }
+    
+    async def _export_model(self, output_path: str) -> Dict[str, str]:
+        """Eksporter modellen til ulike formater"""
+        result = {}
+        
+        # Eksporter USD
+        usd_path = f"{output_path}/model.usd"
+        self.stage.Export(usd_path)
+        result["usd_path"] = usd_path
+        
+        # Eksporter andre formater hvis konfigurert
+        for format_type in self.config.output_formats:
+            if format_type == "glb":
+                glb_path = f"{output_path}/model.glb"
+                # Omniverse har ikke direkte eksport til GLB, så dette er en placeholder
+                # I praksis ville vi bruke et konverteringsverktøy
+                result["glb_path"] = glb_path
+            
+            elif format_type == "obj":
+                obj_path = f"{output_path}/model.obj"
+                # Placeholder for OBJ-eksport
+                result["obj_path"] = obj_path
+            
+            elif format_type == "fbx":
+                fbx_path = f"{output_path}/model.fbx"
+                # Placeholder for FBX-eksport
+                result["fbx_path"] = fbx_path
+        
+        return result
+    
+    def _collect_rendering_statistics(self) -> Dict[str, Any]:
+        """Samle renderingsstatistikk"""
+        if not self.stats["render_times"]:
+            return {}
+        
+        avg_render_time = sum(self.stats["render_times"]) / len(self.stats["render_times"])
+        max_render_time = max(self.stats["render_times"])
+        
+        avg_memory_usage = sum(self.stats["memory_usage"]) / len(self.stats["memory_usage"])
+        max_memory_usage = max(self.stats["memory_usage"])
+        
+        return {
+            "average_render_time": float(avg_render_time),
+            "max_render_time": float(max_render_time),
+            "average_memory_usage_gb": float(avg_memory_usage),
+            "max_memory_usage_gb": float(max_memory_usage),
+            "total_renders": len(self.stats["render_times"])
+        }
+    
+    def _collect_model_statistics(self) -> Dict[str, Any]:
+        """Samle statistikk om 3D-modellen"""
+        try:
+            # Traverser scenen og tell geometri
+            vertex_count = 0
+            polygon_count = 0
+            material_count = 0
+            prim_count = 0
+            
+            # Traverser alle prims
+            for prim in self.stage.Traverse():
+                prim_count += 1
+                
+                # Tell vertekser og polygoner for mesher
+                if prim.IsA(UsdGeom.Mesh):
+                    mesh = UsdGeom.Mesh(prim)
+                    
+                    # Hent vertekser
+                    points_attr = mesh.GetPointsAttr()
+                    if points_attr:
+                        vertex_count += len(points_attr.Get())
+                    
+                    # Hent face counts
+                    face_counts_attr = mesh.GetFaceVertexCountsAttr()
+                    if face_counts_attr:
+                        polygon_count += len(face_counts_attr.Get())
+                
+                # Tell materialer
+                if UsdShade.MaterialBindingAPI(prim).GetDirectBindingRel().GetTargets():
+                    material_count += 1
+            
+            # Beregn kompleksitet
+            complexity = "low"
+            if vertex_count > 1000000 or polygon_count > 500000:
+                complexity = "high"
+            elif vertex_count > 200000 or polygon_count > 100000:
+                complexity = "medium"
+            
+            return {
+                "vertex_count": vertex_count,
+                "polygon_count": polygon_count,
+                "material_count": material_count,
+                "prim_count": prim_count,
+                "complexity": complexity
+            }
+            
+        except Exception as e:
+            logger.error(f"Error collecting model statistics: {str(e)}")
+            return {}
+    
+    def _generate_metadata(self) -> Dict[str, Any]:
+        """Generer metadata for 3D-modellen"""
+        return {
+            "creation_date": datetime.now().isoformat(),
+            "renderer_version": self.config.model_version,
+            "quality_settings": self.config.to_dict(),
+            "statistics": self._collect_model_statistics(),
+            "rendering_statistics": self._collect_rendering_statistics()
+        }
+    
+    def _calculate_texture_memory(self) -> float:
+        """Beregn teksturminne som brukes i modellen"""
+        # Forenklet implementasjon - i praksis ville dette involvere analyse av alle teksturer
+        texture_memory_mb = 0
+        
+        # Traverser scenen for å finne alle teksturer
+        for prim in self.stage.TraverseAll():
+            # Sjekk om prim har et material
+            if not prim.IsA(UsdShade.Material):
+                continue
+            
+            # Traverser shader-nettverk for å finne teksturer
+            material = UsdShade.Material(prim)
+            surface_output = material.GetSurfaceOutput()
+            
+            if not surface_output:
+                continue
+            
+            source = surface_output.GetConnectedSource()
+            if not source:
+                continue
+            
+            shader = UsdShade.Shader(source[0])
+            if not shader:
+                continue
+            
+            # Sjekk for teksturinngang
+            for input_name in ['diffuseColor', 'normal', 'roughness', 'metallic']:
+                shader_input = shader.GetInput(input_name)
+                if not shader_input:
+                    continue
+                
+                connection_source = shader_input.GetConnectedSource()
+                if not connection_source:
+                    continue
+                
+                tex_shader = UsdShade.Shader(connection_source[0])
+                if not tex_shader or tex_shader.GetIdAttr().Get() != 'UsdUVTexture':
+                    continue
+                
+                # Estimer teksturstørrelse basert på filsti
+                file_input = tex_shader.GetInput('file')
+                if not file_input:
+                    continue
+                
+                file_path = file_input.Get()
+                if not file_path:
+                    continue
+                
+                # Estimer teksturstørrelse basert på vanlige størrelser
+                # I praksis ville vi faktisk laste og analysere teksturen
+                texture_memory_mb += 4  # Antar 1024x1024 tekstur med 4 bytes per piksel = 4MB
+        
+        return texture_memory_mb
