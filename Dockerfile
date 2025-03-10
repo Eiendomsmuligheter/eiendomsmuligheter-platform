@@ -1,34 +1,35 @@
-# Use NVIDIA Container Runtime base image
-FROM nvcr.io/nvidia/omniverse:latest
+# Bruk en lettere base image
+FROM python:3.9-slim
 
-# Install system dependencies
+# Installer systemavhengigheter (minimalt sett)
 RUN apt-get update && apt-get install -y \
-    python3.9 \
-    python3-pip \
     postgresql-client \
     libpq-dev \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Sett arbeidskatalog
 WORKDIR /app
 
-# Copy requirements first for better cache usage
+# Kopier requirements først for bedre cache-utnyttelse
 COPY backend/requirements.txt .
-RUN pip3 install -r requirements.txt
 
-# Copy the rest of the application
+# Installer Python-avhengigheter
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Kopier resten av applikasjonen
 COPY . .
 
-# Create necessary directories
+# Opprett nødvendige kataloger
 RUN mkdir -p uploads
 
-# Set environment variables
+# Sett miljøvariabler
 ENV PYTHONPATH=/app
-ENV NVIDIA_VISIBLE_DEVICES=all
-ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics
+ENV PYTHONUNBUFFERED=1
+ENV NVIDIA_VISIBLE_DEVICES=none
 
-# Expose ports
+# Eksponer porter
 EXPOSE 8000
 
-# Start the application
+# Start applikasjonen
 CMD ["uvicorn", "backend.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

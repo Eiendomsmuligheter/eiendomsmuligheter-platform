@@ -18,7 +18,7 @@ services:
     networks:
       - app_network
     deploy:
-      replicas: 2
+      replicas: 1
       update_config:
         parallelism: 1
         delay: 10s
@@ -41,13 +41,16 @@ services:
       - ENOVA_API_KEY=${ENOVA_API_KEY}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - TF_FORCE_GPU_ALLOW_GROWTH=true
+      - TF_CPP_MIN_LOG_LEVEL=2
+      - NVIDIA_VISIBLE_DEVICES=none
     depends_on:
       - db
       - redis
     networks:
       - app_network
     deploy:
-      replicas: 3
+      replicas: 1
       update_config:
         parallelism: 1
         delay: 10s
@@ -77,6 +80,7 @@ services:
     image: redis:6-alpine
     volumes:
       - redis_data:/data
+    command: redis-server --save 60 1 --loglevel warning --maxmemory 100mb --maxmemory-policy allkeys-lru
     networks:
       - app_network
     deploy:
@@ -87,41 +91,7 @@ services:
         condition: on-failure
         max_attempts: 3
 
-  ml_service:
-    build:
-      context: ./ai_modules
-      dockerfile: Dockerfile.prod
-    environment:
-      - MODEL_PATH=/models
-      - NVIDIA_VISIBLE_DEVICES=all
-    volumes:
-      - ./models:/models
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    networks:
-      - app_network
-
   monitoring:
-    image: grafana/grafana:latest
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
-    networks:
-      - app_network
-    deploy:
-      placement:
-        constraints:
-          - node.role == manager
-
-  prometheus:
     image: prom/prometheus:latest
     volumes:
       - ./prometheus:/etc/prometheus
@@ -131,6 +101,9 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+    ports:
+      - "9090:9090"
     networks:
       - app_network
     deploy:
@@ -146,13 +119,17 @@ services:
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - BACKUP_SCHEDULE="0 2 * * *"  # Hver natt kl. 02:00
+      - PGHOST=db
+      - PGUSER=user
+      - PGPASSWORD=pass
+      - PGDATABASE=eiendomsmuligheter
+    entrypoint: ["/bin/sh", "-c"]
     command: |
-      sh -c 'while true; do
-        pg_dump -h db -U user eiendomsmuligheter > /backup/dump_$(date +%Y%m%d_%H%M%S).sql
-        aws s3 sync /backup s3://eiendomsmuligheter-backup
-        sleep 86400
-      done'
+      "
+      apk --no-cache add aws-cli
+      echo '0 2 * * * pg_dump -Fc > /backup/dump_$(date +%Y%m%d).sql && aws s3 cp /backup/dump_$(date +%Y%m%d).sql s3://eiendomsmuligheter-backup/' > /var/spool/cron/crontabs/root
+      crond -f -d 8
+      "
     networks:
       - app_network
     deploy:
@@ -163,7 +140,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  grafana_data:
   prometheus_data:
   backup_data:
 

@@ -1,17 +1,17 @@
 # Build stage
-FROM node:16 AS builder
+FROM node:16-alpine AS builder
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY frontend/package*.json ./
+COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci --production=false
 
 # Copy source files
-COPY frontend/ .
+COPY . .
 
 # Build the application
 RUN npm run build
@@ -19,11 +19,14 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
+# Remove default nginx configuration
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Copy optimized nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Copy built assets from builder stage
 COPY --from=builder /app/build /usr/share/nginx/html
-
-# Copy nginx configuration
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port
 EXPOSE 80

@@ -1,0 +1,837 @@
+openapi: 3.0.3
+info:
+  title: Eiendomsmuligheter Platform API
+  description: |-
+    Offisiell API-dokumentasjon for Eiendomsmuligheter Platform 2.0
+    
+    Dette API-et gir tilgang til alle funksjonene i Eiendomsmuligheter Platform, inkludert:
+    * Eiendomsanalyse med AlterraML
+    * 3D-visualisering med TerravisionJS
+    * Kommuneintegrasjon med CommuneConnect
+    * Økonomi- og bærekraftsvurderinger
+    
+    Mer informasjon finnes på [https://eiendomsmuligheter.no](https://eiendomsmuligheter.no)
+  contact:
+    email: support@eiendomsmuligheter.no
+  license:
+    name: Proprietær
+    url: https://eiendomsmuligheter.no/license
+  version: 2.0.0
+servers:
+  - url: https://api.eiendomsmuligheter.no/api/v1
+    description: Produksjonsserver
+  - url: https://staging.eiendomsmuligheter.no/api/v1
+    description: Testserver
+  - url: http://localhost:8000/api
+    description: Lokal utviklingsserver
+tags:
+  - name: property
+    description: Eiendomsanalyse og informasjon
+  - name: visualization
+    description: 3D visualisering og modellgenerering
+  - name: municipality
+    description: Kommunal data og reguleringsplaner
+  - name: user
+    description: Brukeradministrasjon og autentisering
+  - name: payment
+    description: Betalings- og abonnementshåndtering
+paths:
+  /property/analyze:
+    post:
+      tags:
+        - property
+      summary: Analyser eiendom
+      description: Utfører en omfattende analyse av en eiendom basert på adresse og tilleggsdata
+      operationId: analyzeProperty
+      requestBody:
+        description: Eiendomsdata for analyse
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyRequest'
+        required: true
+      responses:
+        '200':
+          description: Vellykket analyse
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyAnalysisResponse'
+        '400':
+          description: Ugyldig forespørsel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfeil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - bearerAuth: []
+          
+  /municipality/{municipality_id}/regulations:
+    get:
+      tags:
+        - municipality
+      summary: Hent alle reguleringsplaner for en kommune
+      description: Returnerer en liste over alle tilgjengelige reguleringsplaner for den angitte kommunen
+      operationId: getMunicipalityRegulations
+      parameters:
+        - name: municipality_id
+          in: path
+          description: Kommunens ID (f.eks. 0301 for Oslo)
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vellykket henting av reguleringsplaner
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RegulationData'
+        '404':
+          description: Kommune ikke funnet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfeil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - bearerAuth: []
+          
+  /municipality/{municipality_id}/contacts:
+    get:
+      tags:
+        - municipality
+      summary: Hent kontaktinformasjon for en kommune
+      description: Returnerer kontaktinformasjon for relevante avdelinger i den angitte kommunen
+      operationId: getMunicipalityContacts
+      parameters:
+        - name: municipality_id
+          in: path
+          description: Kommunens ID (f.eks. 0301 for Oslo)
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vellykket henting av kontaktinformasjon
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MunicipalityContact'
+        '404':
+          description: Kommune ikke funnet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfeil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - bearerAuth: []
+          
+  /visualization/terrain/generate:
+    post:
+      tags:
+        - visualization
+      summary: Generer terrengmodell
+      description: Genererer en 3D-terrengmodell basert på eiendomsdata
+      operationId: generateTerrain
+      requestBody:
+        description: Terrenggenereringsforespørsel
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TerrainGenerationRequest'
+        required: true
+      responses:
+        '200':
+          description: Vellykket generering av terreng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerrainGenerationResponse'
+        '400':
+          description: Ugyldig forespørsel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfeil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - bearerAuth: []
+          
+  /visualization/building/generate:
+    post:
+      tags:
+        - visualization
+      summary: Generer bygningsmodell
+      description: Genererer en 3D-bygningsmodell basert på spesifikasjoner
+      operationId: generateBuilding
+      requestBody:
+        description: Bygningsgenereringsforespørsel
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuildingGenerationRequest'
+        required: true
+      responses:
+        '200':
+          description: Vellykket generering av bygning
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuildingGenerationResponse'
+        '400':
+          description: Ugyldig forespørsel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfeil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - bearerAuth: []
+        
+  /auth/token:
+    post:
+      tags:
+        - user
+      summary: Autentisering
+      description: Henter autentiseringstoken basert på brukernavn og passord
+      operationId: getAuthToken
+      requestBody:
+        description: Brukerlegitimasjon
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Vellykket autentisering
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Uautorisert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfeil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security: []
+
+  /payment/subscription:
+    post:
+      tags:
+        - payment
+      summary: Opprett abonnement
+      description: Oppretter et nytt abonnement for brukeren
+      operationId: createSubscription
+      requestBody:
+        description: Abonnementsforespørsel
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+        required: true
+      responses:
+        '200':
+          description: Vellykket opprettelse av abonnement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '400':
+          description: Ugyldig forespørsel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfeil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - bearerAuth: []
+
+components:
+  schemas:
+    PropertyRequest:
+      type: object
+      required:
+        - address
+        - lot_size
+        - current_utilization
+        - building_height
+        - floor_area_ratio
+      properties:
+        property_id:
+          type: string
+          description: Eiendoms-ID (hvis kjent)
+          example: "1234567"
+        address:
+          type: string
+          description: Adressen til eiendommen
+          example: "Storgata 1, 0182 Oslo"
+        municipality_id:
+          type: string
+          description: Kommune-ID (hvis kjent)
+          example: "0301"
+        zoning_category:
+          type: string
+          description: Reguleringstype
+          example: "residential"
+        lot_size:
+          type: number
+          format: float
+          description: Tomtestørrelse i kvadratmeter
+          example: 500.0
+        current_utilization:
+          type: number
+          format: float
+          description: Nåværende utnyttelsesgrad
+          example: 0.3
+        building_height:
+          type: number
+          format: float
+          description: Bygningshøyde i meter
+          example: 12.0
+        floor_area_ratio:
+          type: number
+          format: float
+          description: BRA-faktor
+          example: 0.7
+        images:
+          type: array
+          items:
+            type: string
+          description: Liste med bilde-URLs
+        additional_data:
+          type: object
+          additionalProperties: true
+          description: Tilleggsdata
+          
+    RegulationRule:
+      type: object
+      required:
+        - id
+        - rule_type
+        - value
+        - description
+      properties:
+        id:
+          type: string
+          description: Regel-ID
+          example: "REG-001"
+        rule_type:
+          type: string
+          description: Regeltype
+          example: "floor_area_ratio"
+        value:
+          type: string
+          description: Regelverdi
+          example: "0.7"
+        description:
+          type: string
+          description: Beskrivelse
+          example: "Maks tillatt BRA faktor"
+        unit:
+          type: string
+          description: Måleenhet
+          example: "ratio"
+        category:
+          type: string
+          description: Kategori
+          example: "utilization"
+          
+    BuildingPotential:
+      type: object
+      required:
+        - max_buildable_area
+        - max_height
+        - max_units
+        - optimal_configuration
+      properties:
+        max_buildable_area:
+          type: number
+          format: float
+          description: Maksimalt byggbart areal
+          example: 350.0
+        max_height:
+          type: number
+          format: float
+          description: Maksimal høyde
+          example: 12.0
+        max_units:
+          type: integer
+          description: Maksimalt antall enheter
+          example: 4
+        optimal_configuration:
+          type: string
+          description: Optimal konfigurasjon
+          example: "4 enheter fordelt på 2 etasjer"
+        constraints:
+          type: array
+          items:
+            type: string
+          description: Begrensninger
+          example: ["Avstand til nabo: 4m", "Maks takvinkel: 45°"]
+        recommendations:
+          type: array
+          items:
+            type: string
+          description: Anbefalinger
+          example: ["Plasser bygget mot nord for god solforhold"]
+          
+    EnergyProfile:
+      type: object
+      required:
+        - energy_class
+        - heating_demand
+        - cooling_demand
+        - primary_energy_source
+      properties:
+        energy_class:
+          type: string
+          description: Energiklasse
+          example: "B"
+        heating_demand:
+          type: number
+          format: float
+          description: Oppvarmingsbehov
+          example: 75.0
+        cooling_demand:
+          type: number
+          format: float
+          description: Kjølebehov
+          example: 20.0
+        primary_energy_source:
+          type: string
+          description: Primær energikilde
+          example: "Electricity"
+        recommendations:
+          type: array
+          items:
+            type: string
+          description: Anbefalinger
+          example: ["Vurder solceller på sørvendt tak"]
+          
+    PropertyAnalysisResponse:
+      type: object
+      required:
+        - property_id
+        - address
+        - regulations
+        - building_potential
+      properties:
+        property_id:
+          type: string
+          description: Eiendoms-ID
+          example: "1234567"
+        address:
+          type: string
+          description: Adresse
+          example: "Storgata 1, 0182 Oslo"
+        regulations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegulationRule'
+          description: Reguleringsregler
+        building_potential:
+          $ref: '#/components/schemas/BuildingPotential'
+          description: Bygningspotensial
+        energy_profile:
+          $ref: '#/components/schemas/EnergyProfile'
+          description: Energiprofil
+        roi_estimate:
+          type: number
+          format: float
+          description: Estimert ROI
+          example: 0.15
+        risk_assessment:
+          type: object
+          additionalProperties:
+            type: string
+          description: Risikovurdering
+          example: {"market_risk": "low", "regulatory_risk": "medium"}
+        recommendations:
+          type: array
+          items:
+            type: string
+          description: Anbefalinger
+          example: ["Bygg rekkehus for optimal utnyttelse", "Inkluder grønne tak"]
+          
+    TerrainGenerationRequest:
+      type: object
+      required:
+        - property_id
+        - width
+        - depth
+      properties:
+        property_id:
+          type: string
+          description: Eiendoms-ID
+          example: "1234567"
+        width:
+          type: number
+          format: float
+          description: Terrengbredde i meter
+          example: 100.0
+        depth:
+          type: number
+          format: float
+          description: Terrengdybde i meter
+          example: 100.0
+        resolution:
+          type: integer
+          description: Oppløsning for terrengkart
+          example: 128
+          default: 128
+        include_surroundings:
+          type: boolean
+          description: Inkluder omkringliggende terreng
+          example: true
+          default: true
+        include_buildings:
+          type: boolean
+          description: Inkluder bygninger
+          example: true
+          default: true
+        texture_type:
+          type: string
+          description: Teksturtype (satellite, map, hybrid)
+          example: "satellite"
+          default: "satellite"
+          
+    TerrainGenerationResponse:
+      type: object
+      required:
+        - heightmap_url
+        - texture_url
+        - metadata
+        - bounds
+      properties:
+        heightmap_url:
+          type: string
+          description: URL til høydekart
+          example: "/api/static/heightmaps/heightmap_1234567_abcd1234.png"
+        texture_url:
+          type: string
+          description: URL til teksturkart
+          example: "/api/static/textures/texture_1234567_abcd1234.jpg"
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Metadata for terrenget
+        bounds:
+          type: object
+          properties:
+            north:
+              type: number
+              format: float
+              example: 59.95
+            south:
+              type: number
+              format: float
+              example: 59.94
+            east:
+              type: number
+              format: float
+              example: 10.76
+            west:
+              type: number
+              format: float
+              example: 10.75
+          description: Geografiske grenser
+          
+    BuildingGenerationRequest:
+      type: object
+      required:
+        - property_id
+        - building_type
+        - floors
+        - width
+        - depth
+        - height
+      properties:
+        property_id:
+          type: string
+          description: Eiendoms-ID
+          example: "1234567"
+        building_type:
+          type: string
+          description: Bygningstype
+          example: "residential"
+        floors:
+          type: integer
+          description: Antall etasjer
+          example: 2
+        width:
+          type: number
+          format: float
+          description: Bygningsbredde i meter
+          example: 10.0
+        depth:
+          type: number
+          format: float
+          description: Bygningsdybde i meter
+          example: 10.0
+        height:
+          type: number
+          format: float
+          description: Bygningshøyde i meter
+          example: 6.0
+        roof_type:
+          type: string
+          description: Taktype
+          example: "flat"
+          default: "flat"
+        style:
+          type: string
+          description: Bygningsstil
+          example: "modern"
+          default: "modern"
+        colors:
+          type: object
+          additionalProperties:
+            type: string
+          description: Fargepalett
+          example: {"walls": "#FFFFFF", "roof": "#FF0000"}
+          
+    BuildingGenerationResponse:
+      type: object
+      required:
+        - model_url
+        - thumbnail_url
+        - metadata
+      properties:
+        model_url:
+          type: string
+          description: URL til 3D-modell
+          example: "/api/static/models/building_1234567_abcd1234.glb"
+        thumbnail_url:
+          type: string
+          description: URL til miniatyrbilde
+          example: "/api/static/textures/building_thumb_1234567_abcd1234.jpg"
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Metadata for bygningen
+          
+    RegulationData:
+      type: object
+      required:
+        - regulation_id
+        - municipality_id
+        - title
+        - status
+        - valid_from
+      properties:
+        regulation_id:
+          type: string
+          description: Reguleringsplan-ID
+          example: "R-123456"
+        municipality_id:
+          type: string
+          description: Kommune-ID
+          example: "0301"
+        title:
+          type: string
+          description: Tittel
+          example: "Reguleringsplan for Storgata 1"
+        description:
+          type: string
+          description: Beskrivelse
+          example: "Reguleringsplan for boligutvikling i sentrum"
+        status:
+          type: string
+          description: Status
+          example: "active"
+        valid_from:
+          type: string
+          format: date
+          description: Gyldig fra
+          example: "2020-01-01"
+        valid_to:
+          type: string
+          format: date
+          description: Gyldig til
+          example: "2030-01-01"
+        document_url:
+          type: string
+          description: URL til dokumenter
+          example: "https://kommune.no/regulations/R-123456.pdf"
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegulationRule'
+          description: Regler
+          
+    MunicipalityContact:
+      type: object
+      required:
+        - municipality_id
+        - name
+        - department
+        - email
+        - role
+      properties:
+        municipality_id:
+          type: string
+          description: Kommune-ID
+          example: "0301"
+        name:
+          type: string
+          description: Navn
+          example: "Ola Nordmann"
+        department:
+          type: string
+          description: Avdeling
+          example: "Byggesaksavdelingen"
+        email:
+          type: string
+          description: E-post
+          example: "ola.nordmann@kommune.no"
+        phone:
+          type: string
+          description: Telefon
+          example: "12345678"
+        role:
+          type: string
+          description: Rolle
+          example: "Byggesaksbehandler"
+          
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: Brukernavn
+          example: "user@example.com"
+        password:
+          type: string
+          description: Passord
+          example: "password123"
+          
+    TokenResponse:
+      type: object
+      required:
+        - access_token
+        - token_type
+        - expires_in
+      properties:
+        access_token:
+          type: string
+          description: JWT-token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        token_type:
+          type: string
+          description: Tokentype
+          example: "bearer"
+        expires_in:
+          type: integer
+          description: Utløpstid i sekunder
+          example: 3600
+          
+    SubscriptionRequest:
+      type: object
+      required:
+        - plan_id
+        - payment_method_id
+      properties:
+        plan_id:
+          type: string
+          description: Abonnementsplan-ID
+          example: "pro_monthly"
+        payment_method_id:
+          type: string
+          description: Betalingsmetode-ID
+          example: "pm_card_visa"
+          
+    SubscriptionResponse:
+      type: object
+      required:
+        - subscription_id
+        - plan_id
+        - status
+        - current_period_end
+      properties:
+        subscription_id:
+          type: string
+          description: Abonnements-ID
+          example: "sub_12345"
+        plan_id:
+          type: string
+          description: Abonnementsplan-ID
+          example: "pro_monthly"
+        status:
+          type: string
+          description: Status
+          example: "active"
+        current_period_end:
+          type: string
+          format: date-time
+          description: Slutt på nåværende periode
+          example: "2023-12-31T23:59:59Z"
+        
+    ErrorResponse:
+      type: object
+      required:
+        - status_code
+        - detail
+      properties:
+        status_code:
+          type: integer
+          description: HTTP-statuskode
+          example: 400
+        detail:
+          type: string
+          description: Feilbeskrivelse
+          example: "Ugyldig forespørsel"
+          
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT-autentiseringstoken 

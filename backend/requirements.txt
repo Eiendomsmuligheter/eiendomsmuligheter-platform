@@ -1,49 +1,97 @@
-fastapi==0.109.0
-uvicorn==0.26.0
-sqlalchemy==2.0.25
+# API og web
+fastapi==0.115.0
+uvicorn==0.25.0
+python-dotenv==1.0.0
+python-multipart==0.0.6
 pydantic==2.5.3
-python-multipart==0.0.9
+typing-extensions==4.9.0
+email-validator==2.1.0
+starlette==0.31.1
 aiofiles==23.2.1
+
+# Database
+sqlalchemy==2.0.25
+alembic==1.13.0
+psycopg2-binary==2.9.9  # For PostgreSQL
+aiosqlite==0.19.0       # For SQLite
+
+# Autentisering og sikkerhet
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-bcrypt==4.1.2
-psycopg2-binary==2.9.9
-alembic==1.13.1
-python-dotenv==1.0.0
+pyjwt==2.8.0
+
+# Nettverk og HTTP
 requests==2.31.0
+httpx==0.26.0
 aiohttp==3.9.1
-numpy==1.26.3
-opencv-python==4.9.0.80
-Pillow==10.2.0
-shapely==2.0.2
+
+# Caching og optimalisering
+redis==5.0.1
+pyarrow==14.0.1
+
+# Data prosessering
+numpy==1.26.2
+pandas==2.1.4
 scipy==1.11.4
-networkx==3.2.1
-matplotlib==3.8.2
+
+# AI og maskinlæring
+scikit-learn==1.3.2
 tensorflow==2.15.0
-#pytorch3d==0.7.5  # Uncomment and install via pip after installing PyTorch
-trimesh==4.0.5
-open3d==0.18.0
-pyrender==0.1.45
-beautifulsoup4==4.12.2
-pytesseract==0.3.10
-reportlab==4.0.8
+torch==2.1.2
+onnxruntime==1.16.3
+onnx==1.15.0
 
-# Testing dependencies
+# Testing
 pytest==7.4.3
-pytest-asyncio==0.23.2
+pytest-asyncio==0.21.1
 pytest-cov==4.1.0
-pytest-mock==3.12.0
 
-# Development dependencies
+# Geometri og romlig analyse
+shapely==2.0.2
+pyproj==3.6.1
+geopy==2.4.1
+geopandas==0.14.1
+
+# Bildebehandling
+Pillow==10.2.0
+opencv-python-headless==4.9.0.80  # Headless versjon for mindre størrelse
+scikit-image==0.22.0  # Lettere alternativ til noen OpenCV-funksjoner
+
+# Dokumentgenerering
+reportlab==4.0.8
+pdfkit==1.0.0
+markdown==3.5.2
+jinja2==3.1.3
+weasyprint==60.2  # For HTML til PDF konvertering
+
+# Web scraping
+beautifulsoup4==4.12.2
+lxml==5.1.0
+
+# Utvikling
 mypy==1.8.0
 black==23.12.1
 isort==5.13.2
 ruff==0.1.9
-bandit==1.7.6
-safety==2.3.5
 
 # Type stubs
 types-requests==2.31.0.10
 types-python-jose==3.3.4.8
 types-beautifulsoup4==4.12.0.7
-types-Pillow==10.2.0
+types-Pillow==10.1.0.2
+
+# Logging og overvåking
+structlog==23.2.0
+prometheus-client==0.19.0
+
+# Ytelse og optimalisering
+numba==0.58.1
+cachetools==5.3.2
+
+# GIS og kartdata
+folium==0.15.1
+osmnx==1.7.1  # For OpenStreetMap data
+
+# 3D-visualisering og prosessering
+trimesh==4.0.5
+pygltflib==1.16.1
